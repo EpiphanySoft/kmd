@@ -5,6 +5,9 @@ const Phyl = require('phylo');
 const PropertyMap = require('./PropertyMap');
 
 class Context {
+    /**
+     * @property {"app.json"/"package.json"/"workspace.json"} FILE
+     */
     static get FILE () {
         return this.$file || (this.$file = this.KEY + '.json');
     }
@@ -48,7 +51,7 @@ class Context {
 
         let data = file.load();
 
-        return new this({
+        return data && new this({
             dir: file.parent,
             file,
             data
@@ -87,6 +90,10 @@ class Workspace extends Context {
     }
 }
 
+Object.assign(Workspace.prototype, {
+    isWorkspace: true
+});
+
 //--------------------------------------------------------------------------------
 
 class CodeBase extends Context {
@@ -106,17 +113,37 @@ class CodeBase extends Context {
     }
 }
 
+Object.assign(CodeBase.prototype, {
+    isCodeBase: true
+});
+
 //--------------------------------------------------------------------------------
 
 class App extends CodeBase {
     //
 }
 
+Object.assign(App.prototype, {
+    isApp: true
+});
+
 //--------------------------------------------------------------------------------
 
 class Package extends CodeBase {
-    //
+    static load (dir) {
+        let context = super.load(dir);
+
+        if (context && !context.data.sencha) {
+            return null
+        }
+
+        return context;
+    }
 }
+
+Object.assign(Package.prototype, {
+    isPackage: true
+});
 
 //--------------------------------------------------------------------------------
 

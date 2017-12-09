@@ -12,8 +12,7 @@ describe('Context', function () {
     it('should return null when there is just an npm package', function () {
         let context = Context.from(projectsDir);
 
-        expect(context).to.not.be(null);
-        expect(context.workspace).to.be(null);
+        expect(context).to.be(null);  // we are in a Node.js package not Cmd package
     });
 
     it('should return null when there is nothing', function () {
