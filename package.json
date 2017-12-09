@@ -1,0 +1,40 @@
+{
+    "name": "@epiphanysoft/kmd",
+    "version": "1.0.0-alpha.0",
+    "description": "Node.js-based Sencha application builder and tools",
+    "author": "Don Griffin (dongryphon)",
+    "license": "GPL-3.0",
+    "homepage": "https://github.com/EpiphanySoft/kmd#readme",
+    "main": "index.js",
+    "bugs": {
+        "url": "https://github.com/EpiphanySoft/kmd/issues"
+    },
+    "dependencies": {
+        "phylo": "^1.0.0-rc.3"
+    },
+    "devDependencies": {
+        "assertly": "^1.0.2",
+        "coveralls": "^3.0.0",
+        "mocha": "^3.5.3",
+        "nyc": "^11.3.0"
+    },
+    "directories": {
+        "bin": "./bin",
+        "doc": "./doc",
+        "lib": "./lib",
+        "man": "./man"
+    },
+    "keywords": [
+        "sencha",
+        "extjs"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/EpiphanySoft/kmd.git"
+    },
+    "scripts": {
+        "debug": "devtool node_modules/mocha/bin/_mocha -qc -- ./test/specs/**/*.js",
+        "test": "nyc mocha ./test/specs/**/*.js",
+        "coverage": "nyc report --reporter=text-lcov | coveralls"
+    }
+}
