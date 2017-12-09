@@ -1,4 +1,6 @@
 # kmd
+[![Build Status](https://travis-ci.org/EpiphanySoft/kmd.svg?branch=master)](https://travis-ci.org/EpiphanySoft/kmd)
+[![Coverage Status](https://coveralls.io/repos/github/EpiphanySoft/kmd/badge.svg?branch=master)](https://coveralls.io/github/EpiphanySoft/kmd?branch=master)
 
 Node.js-based tools to replace Sencha Cmd
 
