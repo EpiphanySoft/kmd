@@ -1,4 +1,9 @@
 {
+    "apps": [
+        "app",
+        "noSuchApp"
+    ],
+
     /**
      * An object containing key value pair framework descriptors.
      *

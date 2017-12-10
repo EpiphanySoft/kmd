@@ -17,48 +17,53 @@ class Context {
     }
 
     static at (dir) {
-        return Phyl.from(dir).hasFile(this.FILE);
+        let d = Phyl.from(dir);
+
+        if (this === Context) {
+            return App.at(d) || Package.at(d) || Workspace.at(d);
+        }
+
+        return d.hasFile(this.FILE);
     }
 
     static from (path) {
-        let context = null;
-        let dir;
+        let root = Phyl.from(path).up(d => this.at(d));
 
-        if (this === Context) {
-            dir = Phyl.from(path).up(d => App.at(d) || Package.at(d) || Workspace.at(d));
-
-            if (dir) {
-                context = App.load(dir) || Package.load(dir) || Workspace.load(dir);
-            }
-        }
-        else {
-            dir = Phyl.from(path).up(d => this.at(d));
-
-            if (dir) {
-                context = this.load(dir);
-            }
-        }
-
-        return context;
+        return this.load(root);
     }
 
     static get () {
         return Context.from(Phyl.cwd());
     }
 
-    static load (dir) {
-        if (!this.at(dir)) {
+    static load (dir, creator = null) {
+        if (dir == null) {
             return null;
         }
 
-        let file = Phyl.from(dir).join(this.FILE);
-        let data = file.load();
+        let d = Phyl.from(dir);
 
-        return new this({
+        if (this === Context) {
+            return App.load(d) || Package.load(d) || Workspace.load(d);
+        }
+
+        if (!this.at(d)) {
+            return null;
+        }
+
+        let file = d.join(this.FILE);
+        let data = file.load();
+        let config = {
             dir: file.parent,
             file,
             data
-        })
+        };
+
+        if (creator) {
+            config.creator = creator;
+        }
+
+        return new this(config);
     }
 
     constructor (config) {
@@ -70,7 +75,11 @@ class Context {
         this.file = this.file.absolutify();
     }
 
-    getConfigProps () {
+    getConfigProps (refresh = false) {
+        if (refresh) {
+            this.configProps = null;
+        }
+
         return this.configProps || (this.configProps = this._gatherProps());
     }
 
@@ -85,6 +94,11 @@ class Context {
         return props;
     }
 }
+
+Object.assign(Context.prototype, {
+    isContext: true,
+    configProps: null
+});
 
 //--------------------------------------------------------------------------------
 
@@ -113,7 +127,7 @@ class Workspace extends Context {
                     this._item = null;
                 }
                 else {
-                    app = App.load(dir);
+                    app = App.load(dir, this);
                 }
 
                 if (app) {
@@ -150,12 +164,20 @@ class Workspace extends Context {
         let pkgs = [];
 
         for (dir of dirs) {
-            dir.list('d', d => {
-                let pkg = Package.load(d);
-                if (pkg) {
-                    pkgs.push(pkg);
-                }
-            });
+            // The package path can point directly at a package...
+            let pkg = Package.load(dir, this);
+            if (pkg) {
+                pkgs.push(pkg);
+            }
+            else {
+                // ...but typically points at a folder of packages
+                dir.list('d', d => {
+                    pkg = Package.load(d, this);
+                    if (pkg) {
+                        pkgs.push(pkg);
+                    }
+                });
+            }
         }
 
         Object.defineProperty(this, 'packages', {
