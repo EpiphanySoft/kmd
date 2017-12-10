@@ -3,7 +3,7 @@
 const Phyl = require('phylo');
 const expect = require('assertly').expect;
 
-const { Context } = require('../../src/Context');
+const { Context, Workspace } = require('../../src/Context');
 
 const baseDir = Phyl.from(__dirname).resolve('../..');
 const projectsDir = Phyl.from(__dirname).resolve('../projects');
@@ -19,6 +19,16 @@ describe('Context', function () {
         let context = Context.from(Phyl.home());
 
         expect(context).to.be(null);
+    });
+
+    it('should return null when there is nothing', function () {
+        let workspace = Workspace.from(Phyl.home());
+
+        expect(workspace).to.be(null);
+
+        workspace = Workspace.load(Phyl.home());
+
+        expect(workspace).to.be(null);
     });
 
     it('should load solo-app', function () {
