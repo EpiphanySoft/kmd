@@ -4,6 +4,34 @@ const Phyl = require('phylo');
 
 const PropertyMap = require('./PropertyMap');
 
+/**
+ * This class is an abstract base class for App, Package and Workspace. Each directory in
+ * a Cmd workspace can contain one of the master descriptors (app.json, package.json and/or
+ * workspace.json) and these class manage loading and accessing these descriptors.
+ *
+ * Typically, a context is loaded from the current directory (cwd):
+ *
+ *      let context = Context.get();
+ *
+ *      if (context) {
+ *          // the cwd corresponds to, or is a subdirectory of, some Cmd context...
+ *          if (context.isApp) {
+ *              // cwd is an app or a subdir of an app...
+ *
+ *              let workspace = context.workspace;  // get the workspace
+ *          }
+ *          else if (context.isPackage) {
+ *              // cwd is a package or a subdir of one...
+ *
+ *              let workspace = context.workspace;
+ *          }
+ *          else {
+ *              // cwd is a workspace or subdir of one...
+ *          }
+ *      }
+ *
+ * In some cases, a directory can correspond to an App and a Workspace.
+ */
 class Context {
     /**
      * @property {"app.json"/"package.json"/"workspace.json"} FILE
@@ -12,10 +40,18 @@ class Context {
         return this.$file || (this.$file = this.KEY + '.json');
     }
 
+    /**
+     * @property {"app"/"package"/"workspace"} KEY
+     */
     static get KEY () {
         return this.$key || (this.$key = this.name.toLowerCase());
     }
 
+    /**
+     * Returns `true` if the given directory is this type of `Context`.
+     * @param {String/phylo.File} dir
+     * @return {Boolean}
+     */
     static at (dir) {
         let d = Phyl.from(dir);
 
@@ -26,16 +62,38 @@ class Context {
         return d.hasFile(this.FILE);
     }
 
-    static from (path, creator = null) {
-        let root = Phyl.from(path).up(d => this.at(d));
+    /**
+     * Starting in the specified location and climbing upwards, create and return the
+     * most specific type of `Context`.
+     * @param {String/File} dir The path as a string of `File` (from `phylo` module).
+     * @param {Context} [creator] Used internally to pass the Context responsible for
+     * creating this new Context.
+     * @return {Context} The most specific type of context or `null`.
+     */
+    static from (dir, creator = null) {
+        let root = Phyl.from(dir).up(d => this.at(d));
 
         return this.load(root, creator);
     }
 
+    /**
+     * Starting in the `cwd()` and climbing upwards, create and return the most specific
+     * type of `Context`.
+     * @param {Context} [creator] Used internally to pass the Context responsible for
+     * creating this new Context.
+     * @return {Context} The most specific type of context or `null`.
+     */
     static get (creator = null) {
         return Context.from(Phyl.cwd(), creator);
     }
 
+    /**
+     * From the specified location, create and return the most specific type of `Context`.
+     * @param {String/File} dir The path as a string of `File` (from `phylo` module).
+     * @param {Context} [creator] Used internally to pass the Context responsible for
+     * creating this new Context.
+     * @return {Context} The most specific type of context or `null`.
+     */
     static load (dir, creator = null) {
         if (dir == null) {
             return null;
@@ -75,6 +133,11 @@ class Context {
         this.file = this.file.absolutify();
     }
 
+    /**
+     * Returns the `PropertyMap` of properties for this context.
+     * @param {Boolean} [refresh] Pass `true` to rebuild the property map.
+     * @return {PropertyMap}
+     */
     getConfigProps (refresh = false) {
         if (refresh) {
             this.configProps = null;
@@ -83,6 +146,12 @@ class Context {
         return this.configProps || (this.configProps = this._gatherProps());
     }
 
+    /**
+     * Looks up a property in the property map (see `getConfigProps`).
+     * @param {String} prop The name of the property to retrieve.
+     * @param {Boolean} [refresh] Pass `true` to rebuild the property map.
+     * @return {Mixed}
+     */
     getProp (prop, refresh = false) {
         let props = this.getConfigProps(refresh);
         return props.get(prop);
