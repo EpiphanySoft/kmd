@@ -26,14 +26,14 @@ class Context {
         return d.hasFile(this.FILE);
     }
 
-    static from (path) {
+    static from (path, creator = null) {
         let root = Phyl.from(path).up(d => this.at(d));
 
-        return this.load(root);
+        return this.load(root, creator);
     }
 
-    static get () {
-        return Context.from(Phyl.cwd());
+    static get (creator = null) {
+        return Context.from(Phyl.cwd(), creator);
     }
 
     static load (dir, creator = null) {
@@ -44,7 +44,7 @@ class Context {
         let d = Phyl.from(dir);
 
         if (this === Context) {
-            return App.load(d) || Package.load(d) || Workspace.load(d);
+            return App.load(d, creator) || Package.load(d, creator) || Workspace.load(d, creator);
         }
 
         if (!this.at(d)) {
@@ -83,6 +83,17 @@ class Context {
         return this.configProps || (this.configProps = this._gatherProps());
     }
 
+    getProp (prop, refresh = false) {
+        let props = this.getConfigProps(refresh);
+        return props.get(prop);
+    }
+
+    relativePath (dir) {
+        let rel = Phyl.from(dir).relativize(this.dir);
+        rel = rel.slashify();
+        return rel;
+    }
+
     _gatherProps (props = null) {
         props = props || new PropertyMap();
 
@@ -93,38 +104,36 @@ class Context {
 
         return props;
     }
+
+    _set (prop, value) {
+        Object.defineProperty(this, prop, { value: value });
+    }
 }
 
 Object.assign(Context.prototype, {
     isContext: true,
-    configProps: null
+    configProps: null,
+    creator: null
 });
 
 //--------------------------------------------------------------------------------
 
 class Workspace extends Context {
-    static load (dir) {
-        let context = super.load(dir);
-
-        if (context) {
-            context.workspace = this;
-        }
-
-        return context;
-    }
-
     get apps () {
         let apps = [];
+        let creator = this.creator && this.creator.isApp && this.creator;
+        let creatorPath = creator && creator.dir.path;
+        let found = !creator;
 
         if (this.data.apps) {
             let app, dir;
 
             for (let path of this.data.apps) {
                 dir = this.dir.join(path).absolutify();
-                app = this._item;
 
-                if (app && app.path === dir.path) {
-                    this._item = null;
+                if (dir.equals(creatorPath)) {
+                    app = creator;
+                    found = true;
                 }
                 else {
                     app = App.load(dir, this);
@@ -136,80 +145,86 @@ class Workspace extends Context {
             }
         }
 
-        Object.defineProperty(this, 'apps', {
-            value: apps
-        });
+        if (!found) {
+            apps.push(creator);
+        }
+
+        this._set('apps', apps);
 
         return apps;
     }
 
     get packages () {
-        let dirs = [];
-
-        let dir = this.getConfigProps('workspace.packages.dir');
-        if (dir) {
-            for (let d of dir.split(',')) {
-                dir = Phyl.from(d);
-                if (dir.exists()) {
-                    dirs.push(dir);
-                }
-            }
-        }
-
-        dir = Phyl.from(this.getConfigProps('workspace.packages.extract'));
-        if (dir && dir.exists()) {
-            dirs.push(dir);
-        }
-
+        let dirs = this.getPackagePath();
+        let creator = this.creator && this.creator.isPackage && this.creator;
+        let creatorPath = creator && creator.dir.path;
         let pkgs = [];
 
-        for (dir of dirs) {
-            // The package path can point directly at a package...
-            let pkg = Package.load(dir, this);
-            if (pkg) {
-                pkgs.push(pkg);
+        let load = d => {
+            let p = d.equals(creatorPath) ? creator : Package.load(d, this);
+            if (p) {
+                pkgs.push(p);
             }
-            else {
+            return p;
+        };
+
+        for (let dir of dirs) {
+            // The package path can point directly at a package...
+            if (!load(dir)) {
                 // ...but typically points at a folder of packages
-                dir.list('d', d => {
-                    pkg = Package.load(d, this);
-                    if (pkg) {
-                        pkgs.push(pkg);
-                    }
-                });
+                dir.list('d', (name, d) => load(d));
             }
         }
 
-        Object.defineProperty(this, 'packages', {
-            value: pkgs
-        });
+        this._set('packages', pkgs);
+
+        return pkgs;
     }
 
-    _setup (item) {
-        this._item = item;
+    get workspace () {
+        return this;
+    }
+
+    getPackagePath () {
+        let dirs = [ Phyl.from(this.getProp('workspace.packages.extract')) ];
+        let dir = this.getProp('workspace.packages.dir');
+
+        if (dir) {
+            for (let d of dir.split(',')) {
+                dirs.push(Phyl.from(d));
+            }
+        }
+        else {
+            dirs.push(this.dir.join('packages'));
+        }
+
+        let map = {};
+        let distinct = d => {
+            let p = d && d.exists() && d.absolutePath();
+            return p && !map[p] && (map[p] = d);
+        };
+
+        return dirs.filter(distinct).map(d => d.nativize());
     }
 }
 
 Object.assign(Workspace.prototype, {
-    isWorkspace: true,
-    _item: null
+    isWorkspace: true
 });
 
 //--------------------------------------------------------------------------------
 
 class CodeBase extends Context {
-    static load (dir) {
-        let context = super.load(dir);
+    get workspace () {
+        let workspace = this.creator;
 
-        if (context) {
-            context.workspace = Workspace.from(dir);
-
-            if (context.workspace) {
-                context.workspace._setup(context);
-            }
+        if (!workspace || !workspace.isWorkspace) {
+            workspace = Workspace.from(this.dir, this);
         }
 
-        return context;
+        this._set('workspace', workspace);
+
+        return workspace;
     }
 
     _gatherProps () {
@@ -241,7 +256,7 @@ class Package extends CodeBase {
     static at (dir) {
         if (super.at(dir)) {
             let data = dir.join(this.FILE).load();
-            return 'sencha' in data;
+            return typeof data.sencha === 'object';
         }
 
         return false;
@@ -257,6 +272,7 @@ Object.assign(Package.prototype, {
 module.exports = {
     Context,
     Workspace,
+    CodeBase,
     App,
     Package
 };

@@ -2,7 +2,7 @@
     /**
      * The application's namespace.
      */
-    "name": "App",
+    "name": "WorkspaceApp",
 
     /**
      * The version of the application.
