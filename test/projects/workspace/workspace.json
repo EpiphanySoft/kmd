@@ -1,4 +1,9 @@
 {
+    "apps": [
+        "app",
+        "noSuchApp"
+    ],
+
     /**
      * An object containing key value pair framework descriptors.
      *
@@ -43,7 +48,7 @@
          * This folder contains all local packages.
          * If a comma-separated string is used as value the first path will be used as the path to generate new packages.
          */
-        "dir": "${workspace.dir}/packages/local,${workspace.dir}/packages",
+        "dir": "${workspace.dir}/packages/local,${workspace.dir}/packages,",
 
         /**
          * This folder contains all extracted (remote) packages.

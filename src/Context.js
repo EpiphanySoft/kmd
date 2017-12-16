@@ -4,6 +4,34 @@ const Phyl = require('phylo');
 
 const PropertyMap = require('./PropertyMap');
 
+/**
+ * This class is an abstract base class for App, Package and Workspace. Each directory in
+ * a Cmd workspace can contain one of the master descriptors (app.json, package.json and/or
+ * workspace.json) and these class manage loading and accessing these descriptors.
+ *
+ * Typically, a context is loaded from the current directory (cwd):
+ *
+ *      let context = Context.get();
+ *
+ *      if (context) {
+ *          // the cwd corresponds to, or is a subdirectory of, some Cmd context...
+ *          if (context.isApp) {
+ *              // cwd is an app or a subdir of an app...
+ *
+ *              let workspace = context.workspace;  // get the workspace
+ *          }
+ *          else if (context.isPackage) {
+ *              // cwd is a package or a subdir of one...
+ *
+ *              let workspace = context.workspace;
+ *          }
+ *          else {
+ *              // cwd is a workspace or subdir of one...
+ *          }
+ *      }
+ *
+ * In some cases, a directory can correspond to an App and a Workspace.
+ */
 class Context {
     /**
      * @property {"app.json"/"package.json"/"workspace.json"} FILE
@@ -12,81 +40,244 @@ class Context {
         return this.$file || (this.$file = this.KEY + '.json');
     }
 
+    /**
+     * @property {"app"/"package"/"workspace"} KEY
+     */
     static get KEY () {
         return this.$key || (this.$key = this.name.toLowerCase());
     }
 
-    static from (path) {
-        let context = null;
-        let dir = Phyl.from(path).up(
-            d => d.hasFile(Workspace.FILE) || d.hasFile(Package.FILE) || d.hasFile(App.FILE)
-        );
+    /**
+     * Returns `true` if the given directory is this type of `Context`.
+     * @param {String/phylo.File} dir
+     * @return {Boolean}
+     */
+    static at (dir) {
+        let d = Phyl.from(dir);
 
-        if (dir) {
-            if (dir.hasFile(App.FILE)) {
-                context = App;
-            }
-            else if (dir.hasFile(Package.FILE)) {
-                context = Package;
-            }
-            else {
-                context = Workspace;
-            }
-
-            context = context.load(dir);
+        if (this === Context) {
+            return App.at(d) || Package.at(d) || Workspace.at(d);
         }
 
-        return context;
+        return d.hasFile(this.FILE);
     }
 
-    static get () {
-        return Context.from(Phyl.cwd());
+    /**
+     * Starting in the specified location and climbing upwards, create and return the
+     * most specific type of `Context`.
+     * @param {String/File} dir The path as a string of `File` (from `phylo` module).
+     * @param {Context} [creator] Used internally to pass the Context responsible for
+     * creating this new Context.
+     * @return {Context} The most specific type of context or `null`.
+     */
+    static from (dir, creator = null) {
+        let root = Phyl.from(dir).up(d => this.at(d));
+
+        return this.load(root, creator);
     }
 
-    static load (dir) {
-        let file = Phyl.from(dir).upToFile(this.FILE);
-        if (!file) {
+    /**
+     * Starting in the `cwd()` and climbing upwards, create and return the most specific
+     * type of `Context`.
+     * @param {Context} [creator] Used internally to pass the Context responsible for
+     * creating this new Context.
+     * @return {Context} The most specific type of context or `null`.
+     */
+    static get (creator = null) {
+        return Context.from(Phyl.cwd(), creator);
+    }
+
+    /**
+     * From the specified location, create and return the most specific type of `Context`.
+     * @param {String/File} dir The path as a string of `File` (from `phylo` module).
+     * @param {Context} [creator] Used internally to pass the Context responsible for
+     * creating this new Context.
+     * @return {Context} The most specific type of context or `null`.
+     */
+    static load (dir, creator = null) {
+        if (dir == null) {
             return null;
         }
 
-        let data = file.load();
+        let d = Phyl.from(dir);
 
-        return data && new this({
+        if (this === Context) {
+            return App.load(d, creator) || Package.load(d, creator) || Workspace.load(d, creator);
+        }
+
+        if (!this.at(d)) {
+            return null;
+        }
+
+        let file = d.join(this.FILE);
+        let data = file.load();
+        let config = {
             dir: file.parent,
             file,
             data
-        })
+        };
+
+        if (creator) {
+            config.creator = creator;
+        }
+
+        return new this(config);
     }
 
     constructor (config) {
-        this.dir = this.file = this.data = null;
+        this.data = null;
 
         Object.assign(this, config);
+
+        this.dir = this.dir.absolutify();
+        this.file = this.file.absolutify();
     }
 
-    getConfigProps (props = null) {
+    /**
+     * Returns the `PropertyMap` of properties for this context.
+     * @param {Boolean} [refresh] Pass `true` to rebuild the property map.
+     * @return {PropertyMap}
+     */
+    getConfigProps (refresh = false) {
+        if (refresh) {
+            this.configProps = null;
+        }
+
+        return this.configProps || (this.configProps = this._gatherProps());
+    }
+
+    /**
+     * Looks up a property in the property map (see `getConfigProps`).
+     * @param {String} prop The name of the property to retrieve.
+     * @param {Boolean} [refresh] Pass `true` to rebuild the property map.
+     * @return {String/Number/Boolean}
+     */
+    getProp (prop, refresh = false) {
+        let props = this.getConfigProps(refresh);
+        return props.get(prop);
+    }
+
+    relativePath (dir) {
+        let rel = Phyl.from(dir).relativize(this.dir);
+        rel = rel.slashify();
+        return rel;
+    }
+
+    _gatherProps (props = null) {
         props = props || new PropertyMap();
 
         let key = this.constructor.KEY;
 
-        props.flatten(key, this.data);
+        props.flatten(key, this._getData());
         props.add(key + '.dir', this.dir.path);
 
         return props;
     }
+
+    _getData () {
+        return this.data;
+    }
+
+    _set (prop, value) {
+        Object.defineProperty(this, prop, { value: value });
+    }
 }
+
+Object.assign(Context.prototype, {
+    isContext: true,
+    configProps: null,
+    creator: null
+});
 
 //--------------------------------------------------------------------------------
 
 class Workspace extends Context {
-    static load (dir) {
-        let context = super.load(dir);
+    get apps () {
+        let apps = [];
+        let creator = this.creator && this.creator.isApp && this.creator;
+        let creatorPath = creator && creator.dir.path;
+        let found = !creator;
 
-        if (context) {
-            context.workspace = this;
+        if (this.data.apps) {
+            let app, dir;
+
+            for (let path of this.data.apps) {
+                dir = this.dir.join(path).absolutify();
+
+                if (dir.equals(creatorPath)) {
+                    app = creator;
+                    found = true;
+                }
+                else {
+                    app = App.load(dir, this);
+                }
+
+                if (app) {
+                    apps.push(app);
+                }
+            }
         }
 
-        return context;
+        if (!found) {
+            apps.push(creator);
+        }
+
+        this._set('apps', apps);
+
+        return apps;
+    }
+
+    get packages () {
+        let dirs = this.getPackagePath();
+        let creator = this.creator && this.creator.isPackage && this.creator;
+        let creatorPath = creator && creator.dir.path;
+        let pkgs = [];
+
+        let load = d => {
+            let p = d.equals(creatorPath) ? creator : Package.load(d, this);
+            if (p) {
+                pkgs.push(p);
+            }
+            return p;
+        };
+
+        for (let dir of dirs) {
+            // The package path can point directly at a package...
+            if (!load(dir)) {
+                // ...but typically points at a folder of packages
+                dir.list('d', (name, d) => load(d));
+            }
+        }
+
+        this._set('packages', pkgs);
+
+        return pkgs;
+    }
+
+    get workspace () {
+        return this;
+    }
+
+    getPackagePath () {
+        let dirs = [ Phyl.from(this.getProp('workspace.packages.extract')) ];
+        let dir = this.getProp('workspace.packages.dir');
+
+        if (dir) {
+            for (let d of dir.split(',')) {
+                dirs.push(Phyl.from(d));
+            }
+        }
+        else {
+            dirs.push(this.dir.join('packages'));
+        }
+
+        let map = {};
+        let distinct = d => {
+            let p = d && d.exists() && d.absolutePath();
+            return p && !map[p] && (map[p] = d);
+        };
+
+        return dirs.filter(distinct).map(d => d.nativize());
     }
 }
 
@@ -97,19 +288,50 @@ Object.assign(Workspace.prototype, {
 //--------------------------------------------------------------------------------
 
 class CodeBase extends Context {
-    static load (dir) {
-        let context = super.load(dir);
-        context.workspace = Workspace.load(dir);
+    get classpath () {
+        let cp = this._classpath;
 
-        return context;
+        if (!cp) {
+            cp = this.getProp(`${this.prefix}.classpath`);
+            this._classpath = cp = this._resolvePath(cp);
+        }
+
+        return cp;
     }
 
-    getConfigProps () {
-        let props = super.getConfigProps();
+    get overrides () {
+        let op = this._overrides;
 
-        this.workspace.getConfigProps(props);
+        if (!op) {
+            op = this.getProp(`${this.prefix}.overrides`);
+            this._overrides = op = this._resolvePath(op);
+        }
+
+        return op;
+    }
+
+    get workspace () {
+        let workspace = this.creator;
+
+        if (!workspace || !workspace.isWorkspace) {
+            workspace = Workspace.from(this.dir, this);
+        }
+
+        this._set('workspace', workspace);
+
+        return workspace;
+    }
+
+    _gatherProps () {
+        let props = super._gatherProps();
+
+        this.workspace._gatherProps(props);
 
         return props;
+    }
+
+    _resolvePath (path) {
+        return path.split(',').map(p => this.dir.resolve(p));
     }
 }
 
@@ -120,29 +342,38 @@ Object.assign(CodeBase.prototype, {
 //--------------------------------------------------------------------------------
 
 class App extends CodeBase {
-    //
 }
 
 Object.assign(App.prototype, {
-    isApp: true
+    isApp: true,
+    prefix: 'app'
 });
 
 //--------------------------------------------------------------------------------
 
 class Package extends CodeBase {
-    static load (dir) {
-        let context = super.load(dir);
-
-        if (context && !context.data.sencha) {
-            return null
+    static at (dir) {
+        if (super.at(dir)) {
+            let data = dir.join(this.FILE).load();
+            return typeof data.sencha === 'object';
         }
 
-        return context;
+        return false;
+    }
+
+    _getData () {
+        let d = this.data;
+
+        return Object.assign({
+            name: d.name,
+            version: d.name
+        }, d.sencha);
     }
 }
 
 Object.assign(Package.prototype, {
-    isPackage: true
+    isPackage: true,
+    prefix: 'package'
 });
 
 //--------------------------------------------------------------------------------
@@ -150,6 +381,7 @@ Object.assign(Package.prototype, {
 module.exports = {
     Context,
     Workspace,
+    CodeBase,
     App,
     Package
 };
