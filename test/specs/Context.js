@@ -17,6 +17,10 @@ const Dir = {
     workspace: projectsDir.join('workspace')
 };
 
+function baseRel (p) {
+    return Phyl.from(p).relativize(baseDir).slashify();
+}
+
 describe('Context', function () {
     describe('basics', function () {
         it('should return null when there is just an npm package', function () {
@@ -54,8 +58,7 @@ describe('Context', function () {
 
             expect(v).to.not.be(null);
 
-            let dir = Phyl.from(v).relativize(baseDir);
-            dir = dir.slashify();
+            let dir = baseRel(v);
             expect(dir.path).to.be('test/projects/solo-app/build');
         });
 
@@ -77,8 +80,7 @@ describe('Context', function () {
 
                 expect(v).to.not.be(null);
 
-                let dir = Phyl.from(v).relativize(baseDir);
-                dir = dir.slashify();
+                let dir = baseRel(v);
                 expect(dir.path).to.be('test/projects/solo-app/build');
             }
             finally {
@@ -99,8 +101,7 @@ describe('Context', function () {
 
             expect(v).to.not.be(null);
 
-            let dir = Phyl.from(v).relativize(baseDir);
-            dir = dir.slashify();
+            let dir = baseRel(v);
             expect(dir.path).to.be('test/projects/workspace/build');
         });
 
@@ -117,8 +118,7 @@ describe('Context', function () {
 
             expect(v).to.not.be(null);
 
-            let dir = Phyl.from(v).relativize(baseDir);
-            dir = dir.slashify();
+            let dir = baseRel(v);
             expect(dir.path).to.be('test/projects/workspace/build');
         });
 
@@ -135,7 +135,7 @@ describe('Context', function () {
 
             expect(v).to.not.be(null);
 
-            let dir = Phyl.from(v).relativize(baseDir).slashify();
+            let dir = baseRel(v);
             expect(dir.path).to.be('test/projects/workspace/build');
 
             workspace.data.build.dir = '${workspace.dir}/derp';
@@ -145,7 +145,7 @@ describe('Context', function () {
             v2 = workspace.getProp('workspace.build.dir', true);
             expect(v).to.not.be(v2);
 
-            let dir2 = Phyl.from(v2).relativize(baseDir).slashify();
+            let dir2 = baseRel(v2);
             expect(dir2.path).to.be('test/projects/workspace/derp');
         });
     });
@@ -262,6 +262,66 @@ describe('Context', function () {
 
             expect(pkgs.length).to.be(1);
             expect(pkgs[0]).to.be(pkg);
+        });
+    });
+
+    describe('apps', function () {
+        it('should return the proper classpath', function () {
+            let app = App.from(Dir.soloApp);
+            let cp = app.classpath;
+            let rp = cp.map(p => baseRel(p).path);
+
+            expect(rp).to.equal([
+                'test/projects/solo-app/app'
+            ]);
+
+            let cp2 = app.classpath;
+            expect(cp).to.be(cp2);  // should be cached
+        });
+
+        it('should return the proper overrides', function () {
+            let app = App.from(Dir.soloApp);
+            let op = app.overrides;
+            let rp = op.map(p => baseRel(p).path);
+
+            expect(rp).to.equal([
+                'test/projects/solo-app/overrides'
+            ]);
+
+            let op2 = app.overrides;
+            expect(op).to.be(op2);
+        });
+    });
+
+    describe('packages', function () {
+        it('should return the proper classpath', function () {
+            let workspace = Workspace.from(Dir.workspace);
+            let pkg = workspace.packages[0];
+
+            let cp = pkg.classpath;
+            let rp = cp.map(p => baseRel(p).path);
+
+            expect(rp).to.equal([
+                'test/projects/workspace/packages/local/foo/src'
+            ]);
+
+            let cp2 = pkg.classpath;
+            expect(cp).to.be(cp2);
+        });
+
+        it('should return the proper overrides', function () {
+            let workspace = Workspace.from(Dir.workspace);
+            let pkg = workspace.packages[0];
+
+            let op = pkg.overrides;
+            let rp = op.map(p => baseRel(p).path);
+
+            expect(rp).to.equal([
+                'test/projects/workspace/packages/local/foo/overrides'
+            ]);
+
+            let op2 = pkg.overrides;
+            expect(op).to.be(op2);
         });
     });
 });

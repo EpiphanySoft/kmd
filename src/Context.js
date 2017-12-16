@@ -150,7 +150,7 @@ class Context {
      * Looks up a property in the property map (see `getConfigProps`).
      * @param {String} prop The name of the property to retrieve.
      * @param {Boolean} [refresh] Pass `true` to rebuild the property map.
-     * @return {Mixed}
+     * @return {String/Number/Boolean}
      */
     getProp (prop, refresh = false) {
         let props = this.getConfigProps(refresh);
@@ -168,10 +168,14 @@ class Context {
 
         let key = this.constructor.KEY;
 
-        props.flatten(key, this.data);
+        props.flatten(key, this._getData());
         props.add(key + '.dir', this.dir.path);
 
         return props;
+    }
+
+    _getData () {
+        return this.data;
     }
 
     _set (prop, value) {
@@ -284,6 +288,28 @@ Object.assign(Workspace.prototype, {
 //--------------------------------------------------------------------------------
 
 class CodeBase extends Context {
+    get classpath () {
+        let cp = this._classpath;
+
+        if (!cp) {
+            cp = this.getProp(`${this.prefix}.classpath`);
+            this._classpath = cp = this._resolvePath(cp);
+        }
+
+        return cp;
+    }
+
+    get overrides () {
+        let op = this._overrides;
+
+        if (!op) {
+            op = this.getProp(`${this.prefix}.overrides`);
+            this._overrides = op = this._resolvePath(op);
+        }
+
+        return op;
+    }
+
     get workspace () {
         let workspace = this.creator;
 
@@ -303,6 +329,10 @@ class CodeBase extends Context {
 
         return props;
     }
+
+    _resolvePath (path) {
+        return path.split(',').map(p => this.dir.resolve(p));
+    }
 }
 
 Object.assign(CodeBase.prototype, {
@@ -312,11 +342,11 @@ Object.assign(CodeBase.prototype, {
 //--------------------------------------------------------------------------------
 
 class App extends CodeBase {
-    //
 }
 
 Object.assign(App.prototype, {
-    isApp: true
+    isApp: true,
+    prefix: 'app'
 });
 
 //--------------------------------------------------------------------------------
@@ -330,10 +360,20 @@ class Package extends CodeBase {
 
         return false;
     }
+
+    _getData () {
+        let d = this.data;
+
+        return Object.assign({
+            name: d.name,
+            version: d.name
+        }, d.sencha);
+    }
 }
 
 Object.assign(Package.prototype, {
-    isPackage: true
+    isPackage: true,
+    prefix: 'package'
 });
 
 //--------------------------------------------------------------------------------
