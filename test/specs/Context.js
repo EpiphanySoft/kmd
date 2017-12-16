@@ -6,6 +6,7 @@ const Phyl = require('phylo');
 const expect = require('assertly').expect;
 
 const { Context, App, Package, Workspace } = require('../../src/Context');
+const Sources = require('../../src/Sources');
 
 const baseDir = Phyl.from(__dirname).resolve('../..');
 const projectsDir = Phyl.from(__dirname).resolve('../projects');
@@ -156,6 +157,7 @@ describe('Context', function () {
 
             expect(workspace.workspace).to.be(workspace);
 
+            // noinspection JSAnnotator
             delete workspace.data.apps;
 
             let apps = workspace.apps;
@@ -205,7 +207,7 @@ describe('Context', function () {
 
             let apps = workspace.apps;
             expect(apps.length).to.be(1);
-            expect(apps[0].data.name).to.be('WorkspaceApp');
+            expect(apps[0].data.name).to.be('WA');
         });
 
         it('should load the packages of a workspace', function () {
@@ -290,6 +292,74 @@ describe('Context', function () {
 
             let op2 = app.overrides;
             expect(op).to.be(op2);
+        });
+
+        it('should load app source files', async function () {
+            let workspace = Context.from(Dir.workspace);
+            let app = workspace.apps[0];
+
+            let sources = await app.loadSources();
+            let files = sources.files.items;
+
+            expect(sources.files.length).to.be(2);
+
+            let f1 = files[0];
+            let f2 = files[1];
+
+            expect(f1.relativePath.path).to.be('app/app/Application.js');
+            expect(f2.relativePath.path).to.be('app/app/view/main/Main.js');
+
+            expect(f1.code.startsWith("Ext.define('WA.Application',")).to.be(true);
+            expect(f2.code.startsWith("Ext.define('WA.view.main.Main',")).to.be(true);
+
+            expect(() => {
+                sources.files.get(app.dir.resolve('app.js'));
+            }).to.throw(`No such file in project: "app/app.js"`);
+
+            expect(sources._sorter(f1, f1)).to.be(0);
+            expect(sources._sorter(f1, f2)).to.be(-1);
+            expect(sources._sorter(f2, f1)).to.be(1);
+        });
+
+        it('should load augmented app source files', async function () {
+            let workspace = Context.from(Dir.workspace);
+            let app = workspace.apps[0];
+
+            app.data.classpath.unshift('app.js'); // add a file to the classpath
+            let sources = await app.loadSources(new Sources(workspace));
+            let files = sources.files.items;
+
+            expect(sources.files.length).to.be(3);
+
+            let f1 = files[0];
+            let f2 = files[1];
+            let f3 = files[2];
+
+            expect(f1.relativePath.path).to.be('app/app.js');
+            expect(f2.relativePath.path).to.be('app/app/Application.js');
+            expect(f3.relativePath.path).to.be('app/app/view/main/Main.js');
+
+            expect(f1.code.startsWith("Ext.application(")).to.be(true);
+            expect(f2.code.startsWith("Ext.define('WA.Application',")).to.be(true);
+            expect(f3.code.startsWith("Ext.define('WA.view.main.Main',")).to.be(true);
+
+            // Repeat:
+            sources = await app.loadSources();
+            files = sources.files.items;
+
+            expect(sources.files.length).to.be(3);
+
+            f1 = files[0];
+            f2 = files[1];
+            f3 = files[2];
+
+            expect(f1.relativePath.path).to.be('app/app.js');
+            expect(f2.relativePath.path).to.be('app/app/Application.js');
+            expect(f3.relativePath.path).to.be('app/app/view/main/Main.js');
+
+            expect(f1.code.startsWith("Ext.application(")).to.be(true);
+            expect(f2.code.startsWith("Ext.define('WA.Application',")).to.be(true);
+            expect(f3.code.startsWith("Ext.define('WA.view.main.Main',")).to.be(true);
         });
     });
 

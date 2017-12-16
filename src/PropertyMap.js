@@ -56,14 +56,16 @@ class PropertyMap {
         let value = this.props[name];
 
         if (typeof value === 'string' && value.indexOf('${') > -1) {
-            this.work.stack.push(name);
+            let { map, stack } = this.work;
+
+            stack.push(name);
 
             try {
-                if (this.work.map[name]) {
-                    raise(`Circular property references: ${this.work.stack.join(' -> ')}`);
+                if (map[name]) {
+                    raise(`Circular property references: ${stack.join(' -> ')}`);
                 }
 
-                this.work.map[name] = true;
+                map[name] = true;
 
                 for (let pos = 0; (pos = value.indexOf('${', pos)) > -1;) {
                     if (pos > 0 && value[pos - 1] === '$') {
@@ -82,8 +84,8 @@ class PropertyMap {
                 }
             }
             finally {
-                this.work.stack.pop();
-                this.work.map[name] = false;
+                stack.pop();
+                map[name] = false;
             }
         }
 

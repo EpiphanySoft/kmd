@@ -10,7 +10,7 @@
         "url": "https://github.com/EpiphanySoft/kmd/issues"
     },
     "dependencies": {
-        "phylo": "^1.0.0-rc.3"
+        "phylo": "^1.0.0-rc.4"
     },
     "devDependencies": {
         "assertly": "^1.0.2",

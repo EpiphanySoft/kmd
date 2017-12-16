@@ -3,6 +3,7 @@
 const Phyl = require('phylo');
 
 const PropertyMap = require('./PropertyMap');
+const Sources = require('./Sources');
 
 /**
  * This class is an abstract base class for App, Package and Workspace. Each directory in
@@ -134,6 +135,11 @@ class Context {
     }
 
     /**
+     * @property {Workspace} workspace
+     * The owning workspace for this context.
+     */
+
+    /**
      * Returns the `PropertyMap` of properties for this context.
      * @param {Boolean} [refresh] Pass `true` to rebuild the property map.
      * @return {PropertyMap}
@@ -157,27 +163,51 @@ class Context {
         return props.get(prop);
     }
 
-    relativePath (dir) {
-        let rel = Phyl.from(dir).relativize(this.dir);
+    /**
+     * Returns the relative path (from this context's `dir`) to a given `path`. This
+     * path will always use `/` separators even on Windows.
+     * @param {File/String} path The path to a file or directory to be made relative
+     * @returns {File}
+     */
+    relativePath (path) {
+        let rel = Phyl.from(path).relativize(this.dir);
         rel = rel.slashify();
         return rel;
     }
 
-    _gatherProps (props = null) {
-        props = props || new PropertyMap();
+    /**
+     * Populates and returns a `PropertyMap` with all the config properties for this
+     * context.
+     * @param {PropertyMap} propMap
+     * @returns {PropertyMap}
+     * @protected
+     */
+    _gatherProps (propMap = null) {
+        propMap = propMap || new PropertyMap();
 
         let key = this.constructor.KEY;
 
-        props.flatten(key, this._getData());
-        props.add(key + '.dir', this.dir.path);
+        propMap.flatten(key, this._getData());
+        propMap.add(key + '.dir', this.dir.path);
 
-        return props;
+        return propMap;
     }
 
+    /**
+     * Returns the data object for this context.
+     * @returns {Object}
+     * @protected
+     */
     _getData () {
         return this.data;
     }
 
+    /**
+     * Defines a property on this instance using `Object.defineProperty`.
+     * @param {String} prop The name of the property
+     * @param value The value of the property
+     * @protected
+     */
     _set (prop, value) {
         Object.defineProperty(this, prop, { value: value });
     }
@@ -192,6 +222,10 @@ Object.assign(Context.prototype, {
 //--------------------------------------------------------------------------------
 
 class Workspace extends Context {
+    /**
+     * @property {App[]} apps
+     * The array of `App` instances for this workspace.
+     */
     get apps () {
         let apps = [];
         let creator = this.creator && this.creator.isApp && this.creator;
@@ -227,6 +261,10 @@ class Workspace extends Context {
         return apps;
     }
 
+    /**
+     * @property {Package[]} packages
+     * The array of `Package` instances for this workspace.
+     */
     get packages () {
         let dirs = this.getPackagePath();
         let creator = this.creator && this.creator.isPackage && this.creator;
@@ -282,7 +320,8 @@ class Workspace extends Context {
 }
 
 Object.assign(Workspace.prototype, {
-    isWorkspace: true
+    isWorkspace: true,
+    prefix: 'workspace'
 });
 
 //--------------------------------------------------------------------------------
@@ -311,23 +350,59 @@ class CodeBase extends Context {
     }
 
     get workspace () {
-        let workspace = this.creator;
+        let workspace = this._workspace || this.creator;
 
         if (!workspace || !workspace.isWorkspace) {
-            workspace = Workspace.from(this.dir, this);
+            this._workspace = workspace = Workspace.from(this.dir, this);
         }
-
-        this._set('workspace', workspace);
 
         return workspace;
     }
 
-    _gatherProps () {
-        let props = super._gatherProps();
+    getClassFiles () {
+        return this._getFiles('classpath');
+    }
+
+    getOverrideFiles () {
+        return this._getFiles('overrides');
+    }
+
+    async loadSources (sources = null) {
+        if (!sources) {
+            sources = new Sources(this.workspace);
+        }
+
+        await sources.load(this);
+        return sources;
+    }
+
+    _gatherProps (propMap = null) {
+        let props = super._gatherProps(propMap);
 
         this.workspace._gatherProps(props);
 
         return props;
+    }
+
+    _getFiles (pathName) {
+        let filesName = `_${pathName}Files`;
+        let files = this[filesName];
+
+        if (!files) {
+            this[filesName] = files = [];
+
+            let path = this[pathName];
+            for (let entry of path) {
+                if (entry.isFile()) {
+                    files.push(entry);
+                }
+                else {
+                    entry.walk('f', '**/*.js', f => files.push(f));
+                }
+            }
+        }
+
+        return files;
     }
 
     _resolvePath (path) {
