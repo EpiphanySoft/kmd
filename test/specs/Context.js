@@ -321,7 +321,7 @@ describe('Context', function () {
             expect(sources._sorter(f2, f1)).to.be(1);
         });
 
-        it('should load app source files', async function () {
+        it('should load augmented app source files', async function () {
             let workspace = Context.from(Dir.workspace);
             let app = workspace.apps[0];
 
