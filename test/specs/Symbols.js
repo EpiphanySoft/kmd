@@ -42,5 +42,33 @@ describe('Symbols', function () {
             classes = syms.classes;
             expect(cls).to.be(classes);
         });
+
+        it('should remove classes', async function () {
+            let workspace = Context.from(Dir.workspace);
+            let app = workspace.apps[0];
+
+            let sources = await app.loadSources();
+
+            let symbols = new Symbols(sources);
+
+            expect(symbols.files.length).to.be(2);
+
+            let classes = symbols.classes;
+
+            expect(classes).to.not.be(null);
+
+            symbols.sync();
+
+            classes = symbols.classes;
+            expect(classes).to.not.be(null);
+
+            expect(symbols.files.length).to.be(2);
+
+            sources.files.remove(sources.files.items[0]);
+
+            symbols.sync();
+
+            expect(symbols.files.length).to.be(1);
+        });
     });
 });
