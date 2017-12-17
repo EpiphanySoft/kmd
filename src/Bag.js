@@ -1,7 +1,6 @@
 'use strict';
 
-function Empty () {}
-Empty.prototype = Object.create(null);
+const { Empty } = require('./util');
 
 class Bag {
     constructor () {
@@ -10,6 +9,10 @@ class Bag {
         this.length = 0;
 
         this._sorter = this._sorter.bind(this);
+    }
+
+    [Symbol.iterator] () {
+        return this.items[Symbol.iterator]();
     }
 
     add (item, key) {

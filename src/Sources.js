@@ -1,45 +1,13 @@
 'use strict';
 
-const Phyl = require('phylo');
-
-const Bag = require('./Bag');
+const FileBag = require('./FileBag');
 const SourceFile = require('./SourceFile');
-
-class SourceBag extends Bag {
-    constructor (baseDir) {
-        super();
-        this.baseDir = baseDir;
-    }
-
-    keyify (key) {
-        if (key.isSourceFile) {
-            key = key.file;
-        }
-
-        if (!key.$isFile) {
-            key = this.baseDir.resolve(key);
-        }
-
-        return key.absolutePath();
-    }
-
-    miss (key, context) {
-        let file = Phyl.from(key);
-
-        if (!context) {
-            file = file.relativize(this.baseDir).slashify();
-            throw new Error(`No such file in project: "${file.path}"`);
-        }
-
-        return new SourceFile(context, file);
-    }
-}
 
 class Sources {
     constructor (workspace) {
         this.workspace = workspace;
 
-        this.files = new SourceBag(workspace.dir);
+        this.files = new FileBag(workspace.dir);
     }
 
     async load (context) {
@@ -51,9 +19,11 @@ class Sources {
 
     async _loadFiles (context, files) {
         for (let f of files) {
-            let sf = this.files.get(f, context);
+            let sf = new SourceFile(context, f);
 
             await sf.load();
+
+            this.files.add(sf);
         }
     }
 
