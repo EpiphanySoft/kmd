@@ -165,6 +165,13 @@ describe('Bag', function () {
             expect(bag.indexOf('hello')).to.be(1);
             expect(bag.indexOf('world')).to.be(0);
             expect(bag.indexOf('abc')).to.be(2);
+
+            let items = [];
+            for (let s of bag) {
+                items.push(s);
+            }
+
+            expect(items).to.equal([ 'world', 'hello', 'abc' ]);
         });
     });
 

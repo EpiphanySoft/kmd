@@ -312,9 +312,8 @@ describe('Context', function () {
             expect(f1.code.startsWith("Ext.define('WA.Application',")).to.be(true);
             expect(f2.code.startsWith("Ext.define('WA.view.main.Main',")).to.be(true);
 
-            expect(() => {
-                sources.files.get(app.dir.resolve('app.js'));
-            }).to.throw(`No such file in project: "app/app.js"`);
+            let nf = sources.files.get(app.dir.resolve('app.js'));
+            expect(nf).to.be(null);
 
             expect(sources._sorter(f1, f1)).to.be(0);
             expect(sources._sorter(f1, f2)).to.be(-1);
