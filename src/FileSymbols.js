@@ -1,6 +1,10 @@
 'use strict';
 
-const { Empty } = require('./util');
+const traverse = require('babel-traverse').default;
+
+const SymbolBag = require('./SymbolBag');
+const { isExtDefine } = require('./symbols/util');
+const ClassDef = require('./symbols/ClassDef');
 
 class FileSymbols {
     constructor (sourceFile) {
@@ -21,10 +25,21 @@ class FileSymbols {
     }
 
     _parse () {
-        let ast = this.sourceFile.ast;
+        let me = this;
+        let ast = me.sourceFile.ast;
+        let classes = me._classes = new SymbolBag();
 
-        //TODO
-        this._classes = new Empty();
+        traverse(ast, {
+            enter (path) {
+                //
+            },
+
+            CallExpression (path) {
+                if (isExtDefine(path.node)) {
+                    classes.add(new ClassDef(me.sourceFile, path.node));
+                }
+            }
+        });
     }
 }
 

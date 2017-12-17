@@ -1,6 +1,6 @@
 'use strict';
 
-const { Empty } = require('./util');
+const SymbolBag = require('./SymbolBag');
 const FileBag = require('./FileBag');
 const FileSymbols = require('./FileSymbols');
 
@@ -63,12 +63,15 @@ class Symbols {
 
     _parse () {
         ++this.generation;
-        this._classes = new Empty();
+        this._classes = new SymbolBag();
 
         for (let syms of this.files) {
-            let c = syms.classes;
-            //
+            for (let c of syms.classes) {
+                this._classes.add(c);
+            }
         }
+
+        this._classes.sort();
     }
 }
 

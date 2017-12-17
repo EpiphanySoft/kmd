@@ -32,6 +32,10 @@ describe('Symbols', function () {
 
             expect(classes).to.not.be(null);
 
+            expect(classes.length).to.be(2);
+            expect(classes.items[0].name).to.be('WA.Application');
+            expect(classes.items[1].name).to.be('WA.view.main.Main');
+
             // Ensure items are cached:
             let sf = sources.files.items[0];
             let ast = sf._ast;
@@ -69,6 +73,15 @@ describe('Symbols', function () {
             symbols.sync();
 
             expect(symbols.files.length).to.be(1);
+
+            classes = symbols.classes;
+            expect(classes).to.not.be(null);
+
+            expect(classes.length).to.be(1);
+            // expect(classes.items[0].name).to.be('WA.Application');
+            expect(classes.items[0].name).to.be('WA.view.main.Main');
+
+            expect(classes.get('WA.view.main.Main')).to.be(classes.items[0]);
         });
     });
 });
