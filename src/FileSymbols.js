@@ -3,7 +3,7 @@
 const traverse = require('babel-traverse').default;
 
 const SymbolBag = require('./SymbolBag');
-const { isExtDefine } = require('./symbols/util');
+const { Ast } = require('./symbols/util');
 const ClassDef = require('./symbols/ClassDef');
 
 class FileSymbols {
@@ -35,8 +35,15 @@ class FileSymbols {
             },
 
             CallExpression (path) {
-                if (isExtDefine(path.node)) {
-                    classes.add(new ClassDef(me.sourceFile, path.node));
+                if (Ast.isExtDefine(path.node)) {
+                    let classInfo = Ast.grokClass(path.node);
+
+                    if (classInfo.error) {
+                        console.log('Unrecognized use of Ext.define: ' + classInfo.error);
+                    }
+                    else {
+                        classes.add(new ClassDef(me.sourceFile, classInfo));
+                    }
                 }
             }
         });
