@@ -3,7 +3,7 @@
 const traverse = require('babel-traverse').default;
 
 const SymbolBag = require('./SymbolBag');
-const { Ast } = require('./symbols/util');
+const { Ast } = require('./symbols/Util');
 const ClassDef = require('./symbols/ClassDef');
 
 class FileSymbols {

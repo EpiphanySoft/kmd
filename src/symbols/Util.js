@@ -1,6 +1,46 @@
 'use strict';
 
 const Ast = {
+    convert (node) {
+        let value;
+        let method = false;
+
+        if (node.type === 'ObjectExpression') {
+            value = Ast.convertObject(node);
+        }
+        else if (node.type === 'ArrayExpression') {
+            value = Ast.convertArray(node);
+        }
+        else if (node.type === 'FunctionExpression') {
+            method = true;
+        }
+        else if (Ast.isLiteral(node)) {
+            value = node.value;
+        }
+        else if (Ast.isNull(node)) {
+            value = null;
+        }
+        else {
+            debugger
+        }
+
+        return {
+            $value: node,
+            method: method,
+            value: value
+        };
+    },
+
+    convertArray (node) {
+        let array = [];
+
+        for (let el of node.elements) {
+            array.push(Ast.convert(el));
+        }
+
+        return array;
+    },
+
     convertObject (node) {
         let obj = {};
 
@@ -10,41 +50,34 @@ const Ast = {
 
             if (isProp || isMethod) {
                 let kn = prop.key;
-                let key, value;
+                let key;
 
                 if (kn.type === 'Identifier') {
                     key = kn.name;
+                }
+                else if (kn.type === 'StringLiteral') {
+                    key = kn.value;
                 }
                 else {
                     debugger
                 }
 
                 if (key) {
+                    let rhs = {
+                        $prop: prop,
+                        $key: kn,
+                        method: true
+                    };
+
                     if (isProp) {
-                        let vn = prop.value;
-
-                        if (Ast.isLiteral(vn)) {
-                            value = vn.value;
-
-                            obj[key] = {
-                                $p: prop,
-                                $k: kn,
-                                $v: vn,
-                                method: false,
-                                value: value
-                            };
-                        }
+                        Object.assign(rhs, Ast.convert(rhs.$vn = prop.value));
                     }
-                    else {
-                        obj[key] = {
-                            $p: prop,
-                            $k: kn,
-                            $v: null,
-                            method: true,
-                            value: null
-                        };
-                    }
+
+                    obj[key] = rhs;
                 }
+            }
+            else {
+                debugger
             }
         }
 
@@ -58,9 +91,7 @@ const Ast = {
         let r = body[n - 1];
 
         if (!node.async && !node.generator && r.type === 'ReturnStatement' && r.argument) {
-            return {
-                value: r.argument
-            };
+            return r.argument;
         }
 
         return null;
@@ -71,6 +102,7 @@ const Ast = {
 
         if (args[0].type !== 'StringLiteral') {
             return {
+                src: args[0],
                 error: 'Expected class name as first argument'
             };
         }
@@ -82,8 +114,9 @@ const Ast = {
                 body = Ast.getFunctionReturn(body);
                 if (!body || body.type !== 'ObjectExpression') {
                     return {
-                        error: ''
-                    }
+                        src: body || args[1],
+                        error: 'Expected function as 2nd argument to return an object literal'
+                    };
                 }
                 break;
 
@@ -92,19 +125,15 @@ const Ast = {
 
             default:
                 return {
-                    error: ''
-                }
-        }
-
-        let props = {};
-
-        for (let prop of body.properties) {
-            let k = prop.key, v = prop.value;
+                    src: body,
+                    error: 'Expected 2nd argument to be an object or function returning an object'
+                };
         }
 
         return {
             node: node,
-            name: args[0].value
+            name: args[0].value,
+            body: Ast.convertObject(body)
         };
     },
 
@@ -123,7 +152,11 @@ const Ast = {
     isLiteral (node) {
         let t = node.type;
 
-        return t === 'StringLiteral';
+        return t === 'StringLiteral' || t === 'BooleanLiteral' || t === 'NumericLiteral';
+    },
+
+    isNull (node) {
+        return node.type === 'NullLiteral';
     }
 };
 
