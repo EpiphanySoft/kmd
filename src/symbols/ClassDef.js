@@ -1,16 +1,17 @@
 'use strict';
 
-const traverse = require('babel-traverse').default;
+//const traverse = require('babel-traverse').default;
 
 const CodeSymbol = require('./CodeSymbol');
 
 class ClassDef extends CodeSymbol {
-    constructor (sourceFile, info) {
+    constructor (sourceFile, info, comments) {
         super(info.node);
 
         this.sourceFile = sourceFile;
 
         this.name = info.name;
+        this.info = info;
     }
 }
 

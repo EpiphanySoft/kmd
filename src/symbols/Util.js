@@ -1,15 +1,26 @@
 'use strict';
 
 const Ast = {
-    convert (node) {
+    claimComments (node, comments) {
+        let c, it, ret = null;
+
+        for (it = node; (c = comments[it.loc.start.line - 1]) && !c.claimed; it = c.node) {
+            (ret || (ret = [])).unshift(c);
+            c.claimed = true;
+        }
+
+        return ret;
+    },
+
+    convert (node, comments) {
         let value;
         let method = false;
 
         if (node.type === 'ObjectExpression') {
-            value = Ast.convertObject(node);
+            value = Ast.convertObject(node, comments);
         }
         else if (node.type === 'ArrayExpression') {
-            value = Ast.convertArray(node);
+            value = Ast.convertArray(node, comments);
         }
         else if (node.type === 'FunctionExpression') {
             method = true;
@@ -31,17 +42,17 @@ const Ast = {
         };
     },
 
-    convertArray (node) {
+    convertArray (node, comments) {
         let array = [];
 
         for (let el of node.elements) {
-            array.push(Ast.convert(el));
+            array.push(Ast.convert(el, comments));
         }
 
         return array;
     },
 
-    convertObject (node) {
+    convertObject (node, comments) {
         let obj = {};
 
         for (let prop of node.properties) {
@@ -58,6 +69,9 @@ const Ast = {
                 else if (kn.type === 'StringLiteral') {
                     key = kn.value;
                 }
+                else if (kn.type === 'MemberExpression') {
+                    // ignore?
+                }
                 else {
                     debugger
                 }
@@ -66,11 +80,12 @@ const Ast = {
                     let rhs = {
                         $prop: prop,
                         $key: kn,
+                        comments: Ast.claimComments(prop, comments),
                         method: true
                     };
 
                     if (isProp) {
-                        Object.assign(rhs, Ast.convert(rhs.$vn = prop.value));
+                        Object.assign(rhs, Ast.convert(rhs.$vn = prop.value, comments));
                     }
 
                     obj[key] = rhs;
@@ -97,7 +112,7 @@ const Ast = {
         return null;
     },
 
-    grokClass (node) {
+    grokClass (node, comments) {
         let args = node.arguments;
 
         if (args[0].type !== 'StringLiteral') {
@@ -130,11 +145,17 @@ const Ast = {
                 };
         }
 
-        return {
+        let info = {
             node: node,
             name: args[0].value,
-            body: Ast.convertObject(body)
+            body: Ast.convertObject(body, comments)
         };
+
+        for (let key in comments) {
+            comments[key].claimed = false;
+        }
+
+        return info;
     },
 
     isExtDefine (node) {

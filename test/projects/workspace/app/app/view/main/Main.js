@@ -1,3 +1,7 @@
+/**
+ * This is the main view.
+ * @class
+ */
 Ext.define('WA.view.main.Main', function (Main) {
     return {
         extend: 'Ext.Panel',
@@ -14,11 +18,13 @@ Ext.define('WA.view.main.Main', function (Main) {
         },
 
         config: {
+            //# cmd-auto-dependency 1
             /**
              * @cfg {Boolean} boolConfig
              */
             boolConfig: false,
 
+            // @cmd-auto-dependency 2
             /**
              * @cfg {Number} numberConfig
              */

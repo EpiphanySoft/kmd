@@ -310,7 +310,7 @@ describe('Context', function () {
             expect(f2.relativePath.path).to.be('app/app/view/main/Main.js');
 
             expect(f1.code.startsWith("Ext.define('WA.Application',")).to.be(true);
-            expect(f2.code.startsWith("Ext.define('WA.view.main.Main',")).to.be(true);
+            expect(f2.code.includes("Ext.define('WA.view.main.Main',")).to.be(true);
 
             let nf = sources.files.get(app.dir.resolve('app.js'));
             expect(nf).to.be(null);
@@ -340,7 +340,7 @@ describe('Context', function () {
 
             expect(f1.code.startsWith("Ext.application(")).to.be(true);
             expect(f2.code.startsWith("Ext.define('WA.Application',")).to.be(true);
-            expect(f3.code.startsWith("Ext.define('WA.view.main.Main',")).to.be(true);
+            expect(f3.code.includes("Ext.define('WA.view.main.Main',")).to.be(true);
 
             // Repeat:
             sources = await app.loadSources();
@@ -358,7 +358,7 @@ describe('Context', function () {
 
             expect(f1.code.startsWith("Ext.application(")).to.be(true);
             expect(f2.code.startsWith("Ext.define('WA.Application',")).to.be(true);
-            expect(f3.code.startsWith("Ext.define('WA.view.main.Main',")).to.be(true);
+            expect(f3.code.includes("Ext.define('WA.view.main.Main',")).to.be(true);
         });
     });
 

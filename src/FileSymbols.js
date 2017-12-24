@@ -29,6 +29,8 @@ class FileSymbols {
         let ast = me.sourceFile.ast;
         let classes = me._classes = new SymbolBag();
 
+        me._gatherComments(ast);
+
         traverse(ast, {
             enter (path) {
                 //
@@ -36,7 +38,7 @@ class FileSymbols {
 
             CallExpression (path) {
                 if (Ast.isExtDefine(path.node)) {
-                    let classInfo = Ast.grokClass(path.node);
+                    let classInfo = Ast.grokClass(path.node, me.comments);
 
                     if (classInfo.error) {
                         console.log('Unrecognized use of Ext.define: ' + classInfo.error);
@@ -47,6 +49,20 @@ class FileSymbols {
                 }
             }
         });
+    }
+
+    _gatherComments (ast) {
+        this.comments = {
+            // lastLine: Comment
+        };
+
+        for (let c of ast.comments) {
+            this.comments[c.loc.end.line] = {
+                block: c.type === 'CommentBlock',
+                node: c,
+                value: c.value
+            };
+        }
     }
 }
 
