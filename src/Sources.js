@@ -4,8 +4,9 @@ const FileBag = require('./FileBag');
 const SourceFile = require('./SourceFile');
 
 class Sources {
-    constructor (workspace) {
+    constructor (workspace, manager) {
         this.workspace = workspace;
+        this.manager = manager;
 
         this.files = new FileBag(workspace.dir);
     }
@@ -19,7 +20,7 @@ class Sources {
 
     async _loadFiles (context, files) {
         for (let f of files) {
-            let sf = new SourceFile(context, f);
+            let sf = new SourceFile(context, f, this.manager);
 
             await sf.load();
 

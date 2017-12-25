@@ -3,3 +3,5 @@ Ext.define('WA.Application', {
 
     mainView: 'WA.view.main.Main'
 });
+
+Ext.define('X', Ext.apply({}, {}));

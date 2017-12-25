@@ -5,7 +5,7 @@
 const Phyl = require('phylo');
 const expect = require('assertly').expect;
 
-const { Context, App, Package, Workspace } = require('../../src/Context');
+const { Manager, Context, App, Package, Workspace } = require('../../src/Context');
 const Sources = require('../../src/Sources');
 
 const baseDir = Phyl.from(__dirname).resolve('../..');
@@ -50,6 +50,28 @@ describe('Context', function () {
             let context = Context.from(Dir.soloApp);
 
             expect(context.file.name).to.be('app.json');
+            expect(context.isApp).to.be(true);
+            expect(context.manager).to.be(Manager.default);
+
+            let props = context.getConfigProps();
+
+            expect(props).to.not.be(null);
+
+            let v = props.get('workspace.build.dir');
+
+            expect(v).to.not.be(null);
+
+            let dir = baseRel(v);
+            expect(dir.path).to.be('test/projects/solo-app/build');
+        });
+
+        it('should load solo-app w/manager', function () {
+            let mgr = new Manager();
+            let context = Context.from(Dir.soloApp, mgr);
+
+            expect(context.file.name).to.be('app.json');
+            expect(context.isApp).to.be(true);
+            expect(context.manager).to.be(mgr);
 
             let props = context.getConfigProps();
 

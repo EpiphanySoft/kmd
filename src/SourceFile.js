@@ -3,10 +3,11 @@
 const babylon = require('babylon');
 
 class SourceFile {
-    constructor (context, file) {
+    constructor (context, file, manager) {
         this.context = context;
         this.file = file;
         this.generation = 0;
+        this.manager = manager;
         this.relativePath = file.relativize(context.workspace.dir).slashify();
     }
 

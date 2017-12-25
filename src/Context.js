@@ -2,8 +2,45 @@
 
 const Phyl = require('phylo');
 
+const { Empty } = require('./util');
+const Msg = require('./Msg');
 const PropertyMap = require('./PropertyMap');
 const Sources = require('./Sources');
+
+const LEVEL = {
+    error: 1,
+    warn: 2,
+    info: 3,
+    debug: 4,
+    log: 4
+};
+
+class Manager {
+    constructor () {
+        this.logger = console;
+        this.levels = new Empty();
+        this.threshold = 'info';
+        this.thresholds = new Empty();
+    }
+
+    log (msg, loc, ...params) {
+        if (loc.loc) {
+            loc = loc.loc;
+        }
+
+        let code = msg.code;
+        let level = this.levels[code] || msg.level;
+        let min = this.thresholds[code] || this.threshold;
+
+        if (LEVEL[level] <= LEVEL[min]) {
+            let m = msg.format(loc, ...params);
+            this.logger[level](m);
+        }
+    }
+}
+
+Manager.default = new Manager();
+Manager.prototype.isManager = true;
 
 /**
  * This class is an abstract base class for App, Package and Workspace. Each directory in
@@ -129,6 +166,14 @@ class Context {
         this.data = null;
 
         Object.assign(this, config);
+
+        if (this.creator && this.creator.isManager) {
+            this.manager = this.creator;
+            this.creator = null;
+        }
+        else {
+            this.manager = Manager.default;
+        }
 
         this.dir = this.dir.absolutify();
         this.file = this.file.absolutify();
@@ -369,7 +414,7 @@ class CodeBase extends Context {
 
     async loadSources (sources = null) {
         if (!sources) {
-            sources = new Sources(this.workspace);
+            sources = new Sources(this.workspace, this.manager);
         }
 
         await sources.load(this);
@@ -454,6 +499,7 @@ Object.assign(Package.prototype, {
 //--------------------------------------------------------------------------------
 
 module.exports = {
+    Manager,
     Context,
     Workspace,
     CodeBase,

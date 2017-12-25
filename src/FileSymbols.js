@@ -2,15 +2,21 @@
 
 const traverse = require('babel-traverse').default;
 
+const Bag = require('./Bag');
+const Msg = require('./Msg');
+const Directive = require('./Directive');
 const SymbolBag = require('./SymbolBag');
 const { Ast } = require('./symbols/Util');
 const ClassDef = require('./symbols/ClassDef');
+const { capitalize } = require('./util');
 
 class FileSymbols {
-    constructor (sourceFile) {
+    constructor (owner, sourceFile, manager) {
         this.file = sourceFile.file;
         this.generation = sourceFile.generation;
+        this.manager = manager;
         this.sourceFile = sourceFile;
+        this.tags = new Bag();
     }
 
     get classes () {
@@ -41,7 +47,7 @@ class FileSymbols {
                     let classInfo = Ast.grokClass(path.node, me.comments);
 
                     if (classInfo.error) {
-                        console.log('Unrecognized use of Ext.define: ' + classInfo.error);
+                        me.manager.log(Msg.BAD_DEFINE, path.node, classInfo.error);
                     }
                     else {
                         classes.add(new ClassDef(me.sourceFile, classInfo));
@@ -49,6 +55,19 @@ class FileSymbols {
                 }
             }
         });
+
+        for (let c of ast.comments) {
+            if (c.type === 'CommentLine') {
+                let d = Directive.parse('//' + c.value, c.loc);
+
+                if (d && !d.preprocessor) {
+                    let m = `_handle${capitalize(d.tag)}Directive`;
+                    if (this[m]) {
+                        this[m](d, c);
+                    }
+                }
+            }
+        }
     }
 
     _gatherComments (ast) {
@@ -62,6 +81,28 @@ class FileSymbols {
                 node: c,
                 value: c.value
             };
+        }
+    }
+
+    _handleDefineDirective (directive, comment) {
+        for (let name of directive.value.split(',')) {
+            let className = name.trim();
+
+            if (!this._classes.has(className)) {
+                this._classes.add(new ClassDef(this.sourceFile, {
+                    body: null,
+                    name: className,
+                    node: comment
+                }));
+            }
+        }
+    }
+
+    _handleTagDirective (directive) {
+        let tags = directive.value.split(',');
+
+        for (let t of tags) {
+            this.tags.add(t);
         }
     }
 }

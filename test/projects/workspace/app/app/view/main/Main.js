@@ -1,3 +1,7 @@
+// @define WA.view.main.Main
+// #define WA.MainView
+// #tag mainview, viewmain
+
 /**
  * This is the main view.
  * @class

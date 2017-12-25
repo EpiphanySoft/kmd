@@ -1,5 +1,7 @@
 'use strict';
 
+// https://github.com/babel/babylon/blob/master/ast/spec.md
+
 const Ast = {
     claimComments (node, comments) {
         let c, it, ret = null;
@@ -145,17 +147,11 @@ const Ast = {
                 };
         }
 
-        let info = {
+        return {
             node: node,
             name: args[0].value,
-            body: Ast.convertObject(body, comments)
+            body: Ast.convert(body, comments)
         };
-
-        for (let key in comments) {
-            comments[key].claimed = false;
-        }
-
-        return info;
     },
 
     isExtDefine (node) {
