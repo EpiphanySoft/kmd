@@ -21,8 +21,19 @@ const Dir = {
 class TestManager extends Manager {
     constructor () {
         super();
+
         this.messages = [];
-        this.logger = m => this.messages.push(m);
+
+        this.logger = {
+            error: m => this._log('ERR', m),
+            info:  m => this._log('INF', m),
+            log:   m => this._log('DBG', m),
+            warn:  m => this._log('WRN', m)
+        };
+    }
+
+    _log (level, msg) {
+        this.messages.push(`${level}: ${msg}`);
     }
 }
 
@@ -47,6 +58,11 @@ describe('Symbols', function () {
             let symbols = new Symbols(sources);
 
             let [classes, classNames] = getClassNames(symbols);
+
+            expect(mgr.messages).to.equal([
+                'WRN: C1000: Unrecognized use of Ext.define (Expected 2nd argument to be an ' +
+                    'object or function returning an object) -- app/app/Application.js:7:1'
+            ]);
 
             expect(classes).to.not.be(null);
             classes.sort();

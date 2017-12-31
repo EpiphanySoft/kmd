@@ -3,7 +3,7 @@
 const traverse = require('babel-traverse').default;
 
 const Bag = require('./Bag');
-const Msg = require('./Msg');
+const { Msg } = require('./Msg');
 const Directive = require('./Directive');
 const SymbolBag = require('./SymbolBag');
 const { Ast } = require('./symbols/Util');
@@ -30,6 +30,10 @@ class FileSymbols {
         return classes;
     }
 
+    get path () {
+        return this.sourceFile.path;
+    }
+
     _parse () {
         let me = this;
         let ast = me.sourceFile.ast;
@@ -47,7 +51,7 @@ class FileSymbols {
                     let classInfo = Ast.grokClass(path.node, me.comments);
 
                     if (classInfo.error) {
-                        me.manager.log(Msg.BAD_DEFINE, path.node, classInfo.error);
+                        me.manager.log(Msg.BAD_DEFINE, me, path, classInfo.error);
                     }
                     else {
                         classes.add(new ClassDef(me.sourceFile, classInfo));

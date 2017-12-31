@@ -328,8 +328,8 @@ describe('Context', function () {
             let f1 = files[0];
             let f2 = files[1];
 
-            expect(f1.relativePath.path).to.be('app/app/Application.js');
-            expect(f2.relativePath.path).to.be('app/app/view/main/Main.js');
+            expect(f1.path).to.be('app/app/Application.js');
+            expect(f2.path).to.be('app/app/view/main/Main.js');
 
             expect(f1.code.startsWith("Ext.define('WA.Application',")).to.be(true);
             expect(f2.code.includes("Ext.define('WA.view.main.Main',")).to.be(true);
@@ -356,9 +356,9 @@ describe('Context', function () {
             let f2 = files[1];
             let f3 = files[2];
 
-            expect(f1.relativePath.path).to.be('app/app.js');
-            expect(f2.relativePath.path).to.be('app/app/Application.js');
-            expect(f3.relativePath.path).to.be('app/app/view/main/Main.js');
+            expect(f1.path).to.be('app/app.js');
+            expect(f2.path).to.be('app/app/Application.js');
+            expect(f3.path).to.be('app/app/view/main/Main.js');
 
             expect(f1.code.startsWith("Ext.application(")).to.be(true);
             expect(f2.code.startsWith("Ext.define('WA.Application',")).to.be(true);
@@ -374,9 +374,9 @@ describe('Context', function () {
             f2 = files[1];
             f3 = files[2];
 
-            expect(f1.relativePath.path).to.be('app/app.js');
-            expect(f2.relativePath.path).to.be('app/app/Application.js');
-            expect(f3.relativePath.path).to.be('app/app/view/main/Main.js');
+            expect(f1.path).to.be('app/app.js');
+            expect(f2.path).to.be('app/app/Application.js');
+            expect(f3.path).to.be('app/app/view/main/Main.js');
 
             expect(f1.code.startsWith("Ext.application(")).to.be(true);
             expect(f2.code.startsWith("Ext.define('WA.Application',")).to.be(true);

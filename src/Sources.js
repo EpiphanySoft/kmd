@@ -29,8 +29,8 @@ class Sources {
     }
 
     _sorter (a, b) {
-        let ka = a.relativePath.path;
-        let kb = b.relativePath.path;
+        let ka = a.path;
+        let kb = b.path;
         return (ka < kb) ? -1 : ((kb < ka) ? 1 : 0);
     }
 }
