@@ -1,5 +1,7 @@
 'use strict';
 
+const Phyl = require('phylo');
+
 const { Empty } = require('./util');
 
 const LEVEL = {
@@ -15,9 +17,11 @@ const OUT = {
 };
 
 class Manager {
-    constructor () {
+    constructor (baseDir) {
+        this.baseDir = baseDir;
         this.logger = console;
         this.levels = new Empty();
+        this.pathMode = 'abs';
         this.threshold = 'info';
         this.thresholds = new Empty();
     }
@@ -28,15 +32,28 @@ class Manager {
         let min = this.thresholds[code] || this.threshold;
 
         if (LEVEL[level] <= LEVEL[min]) {
-            let m = msg.format(src, loc, ...params);
+            let at = this.formatSrc(src, loc);
+            let m = msg.format(at, ...params);
             let out = OUT[level] || level;
 
             this.logger[out](m);
         }
     }
+
+    formatSrc (src, loc) {
+        let f = src.file || src;
+        if (this.pathMode === 'rel') {
+            f = src.relFile || f.relativize(this.baseDir).slashify();
+        }
+
+        let at = loc && (loc.node || loc);
+        at = at && (at.loc || at);
+        at = at && at.start;
+
+        return at ? `${f.path}:${at.line}:${at.column + 1}` : f.path;
+    }
 }
 
-Manager.default = new Manager();
 Manager.prototype.isManager = true;
 
 //------------------------------------------------------------------------
@@ -50,30 +67,15 @@ class Msg {
         this.text = `${code}: ${text}`;
     }
 
-    format (src, loc, ...params) {
+    format (at, ...params) {
         let s = this.text;
 
         for (let i = 0; i < params.length; ++i) {
             s = s.split(`\${${i}}`).join(params[i]);
         }
 
-        if (src && src.path) {
-            s += ' -- ' + src.path;
-
-            if (loc.node) {
-                loc = loc.node;
-            }
-            if (loc.loc) {
-                loc = loc.loc;
-            }
-
-            let at = loc && loc.start;
-            if (at) {
-                s += ':' + at.line;
-                if (!isNaN(at.column)) {
-                    s += ':' + (at.column + 1);
-                }
-            }
+        if (at) {
+            s += ' -- ' + at;
         }
 
         return s;

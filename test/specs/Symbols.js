@@ -35,6 +35,22 @@ class TestManager extends Manager {
     _log (level, msg) {
         this.messages.push(`${level}: ${msg}`);
     }
+
+    fixAbsolutePaths () {
+        this.messages = this.messages.map(m => {
+            let start = m.lastIndexOf('--') + 3;
+            let end = m.lastIndexOf(':', m.lastIndexOf(':') - 1);
+            let a = m.substr(0, start);
+            let b = Phyl.from(m.substring(start, end));
+            let c = m.substr(end);
+
+            expect(b.isAbsolute()).to.be(true);
+
+            let r = b.relativize(this.baseDir).slashify();
+
+            return a + r.path + c;
+        });
+    }
 }
 
 function getClassNames (symbols) {
@@ -48,10 +64,13 @@ function getClassNames (symbols) {
 
 describe('Symbols', function () {
     describe('basics', async function () {
+        beforeEach(function () {
+            this.workspace = Context.from(Dir.workspace, this.mgr = new TestManager());
+        });
+
         it('should load classes', async function () {
-            let mgr = new TestManager();
-            let workspace = Context.from(Dir.workspace, mgr);
-            let app = workspace.apps[0];
+            this.mgr.pathMode = 'rel';
+            let app = this.workspace.apps[0];
 
             let sources = await app.loadSources();
 
@@ -59,7 +78,7 @@ describe('Symbols', function () {
 
             let [classes, classNames] = getClassNames(symbols);
 
-            expect(mgr.messages).to.equal([
+            expect(this.mgr.messages).to.equal([
                 'WRN: C1000: Unrecognized use of Ext.define (Expected 2nd argument to be an ' +
                     'object or function returning an object) -- app/app/Application.js:7:1'
             ]);
@@ -85,18 +104,22 @@ describe('Symbols', function () {
         });
 
         it('should remove classes', async function () {
-            let workspace = Context.from(Dir.workspace);
-            let app = workspace.apps[0];
+            let app = this.workspace.apps[0];
 
             let sources = await app.loadSources();
 
             let symbols = new Symbols(sources);
 
             expect(symbols.files.length).to.be(2);
-
             let classes = symbols.classes;
 
             expect(classes).to.not.be(null);
+
+            this.mgr.fixAbsolutePaths();
+            expect(this.mgr.messages).to.equal([
+                'WRN: C1000: Unrecognized use of Ext.define (Expected 2nd argument to be an ' +
+                    'object or function returning an object) -- app/app/Application.js:7:1'
+            ]);
 
             symbols.sync();
 

@@ -35,6 +35,20 @@ const Sources = require('./Sources');
  * In some cases, a directory can correspond to an App and a Workspace.
  */
 class Context {
+    constructor (config) {
+        this.data = null;
+
+        Object.assign(this, config);
+
+        if (this.creator && this.creator.isManager) {
+            this._manager = this.creator;
+            this.creator = null;
+        }
+
+        this.dir = this.dir.absolutify();
+        this.file = this.file.absolutify();
+    }
+
     /**
      * @property {"app.json"/"package.json"/"workspace.json"} FILE
      */
@@ -68,8 +82,9 @@ class Context {
      * Starting in the specified location and climbing upwards, create and return the
      * most specific type of `Context`.
      * @param {String/File} dir The path as a string of `File` (from `phylo` module).
-     * @param {Context} [creator] Used internally to pass the Context responsible for
-     * creating this new Context.
+     * @param {Context/Manager} [creator] Used internally to pass the Context responsible
+     * for creating this new Context. If there is no owning Context, alternatively this
+     * may be a Manager instance.
      * @return {Context} The most specific type of context or `null`.
      */
     static from (dir, creator = null) {
@@ -126,34 +141,15 @@ class Context {
         return new this(config);
     }
 
-    constructor (config) {
-        this.data = null;
-
-        Object.assign(this, config);
-
-        if (this.creator && this.creator.isManager) {
-            this._manager = this.creator;
-            this.creator = null;
-        }
-
-        this.dir = this.dir.absolutify();
-        this.file = this.file.absolutify();
-    }
-
     get manager () {
-        let m = this._manager;
-
-        if (!m) {
-            let w = this.workspace;
-
-            m = (w && w !== this) ? w.manager : Manager.default;
-        }
-
-        return m;
+        return this._manager || this.workspace.manager;
     }
 
-    // noinspection JSAnnotator
     set manager (value) {
+        if (value && !value.baseDir) {
+            value.baseDir = this.workspace.dir;
+        }
+
         this._manager = value;
     }
 
@@ -190,10 +186,14 @@ class Context {
      * Returns the relative path (from this context's `dir`) to a given `path`. This
      * path will always use `/` separators even on Windows.
      * @param {File/String} path The path to a file or directory to be made relative
+     * @param {'this'/'workspace'} [base='this'] Pass 'workspace' to use the workspace
+     * root folder as the base.
      * @returns {File}
      */
-    relativePath (path) {
-        let rel = Phyl.from(path).relativize(this.dir);
+    relativize (path, base = 'this') {
+        base = (base === 'workspace') ? this.workspace.dir : this.dir;
+
+        let rel = Phyl.from(path).relativize(base);
         rel = rel.slashify();
         return rel;
     }
@@ -245,6 +245,18 @@ Object.assign(Context.prototype, {
 //--------------------------------------------------------------------------------
 
 class Workspace extends Context {
+    constructor (config) {
+        super(config);
+
+        if (this.creator && this.creator._manager) {
+            this._manager = this.creator._manager;
+        }
+
+        if (this._manager && !this._manager.baseDir) {
+            this._manager.baseDir = this.dir;
+        }
+    }
+
     /**
      * @property {App[]} apps
      * The array of `App` instances for this workspace.
@@ -315,6 +327,14 @@ class Workspace extends Context {
         return pkgs;
     }
 
+    get manager () {
+        if (!this._manager) {
+            this._manager = new Manager(this.dir);
+        }
+
+        return this._manager;
+    }
+
     get workspace () {
         return this;
     }
@@ -344,7 +364,9 @@ class Workspace extends Context {
 
 Object.assign(Workspace.prototype, {
     isWorkspace: true,
-    prefix: 'workspace'
+    prefix: 'workspace',
+
+    pathMode: 'abs'
 });
 
 //--------------------------------------------------------------------------------

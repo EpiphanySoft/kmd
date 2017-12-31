@@ -8,7 +8,8 @@ class SourceFile {
         this.file = file;
         this.generation = 0;
         this.manager = manager;
-        this.path = file.relativize(context.workspace.dir).slashify().path;
+        this.path = file.path;
+        this.relFile = context.relativize(file, 'workspace');
     }
 
     get ast () {
