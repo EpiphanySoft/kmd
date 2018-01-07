@@ -12,6 +12,7 @@
     "dependencies": {
         "babel-traverse": "^6.26.0",
         "babylon": "^6.18.0",
+        "json5": "^0.5.1",
         "phylo": "^1.0.0-rc.4"
     },
     "devDependencies": {

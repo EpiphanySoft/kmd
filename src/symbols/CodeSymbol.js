@@ -1,7 +1,8 @@
 'use strict';
 
 class CodeSymbol {
-    constructor (node) {
+    constructor (at, node) {
+        this.at = at;
         this.node = node;
     }
 }

@@ -1,5 +1,7 @@
 'use strict';
 
+const json5 = require('json5');
+
 const directiveRe = /^\s*\/\/\s*[@#]\s*([a-z.\-]+)\s*(?:\s(.+))?\s*$/i;
 const preprocessorOpenRe = /^\s*\/\/\s*<([a-z.\-]+)\s*(?:\s(.+))?\s*>\s*$/i;
 const preprocessorCloseRe = /^\s*\/\/\s*<\/([a-z.\-]+)\s*>\s*$/i;
@@ -38,6 +40,24 @@ class Directive {
         if (openClose) {
             this.preprocessor = true;
             this[openClose] = true;
+        }
+        else if (value) {
+            if (value.startsWith('{') && value.endsWith('}')) {
+                try {
+                    this.value = json5.parse(value);
+                }
+                catch (e) {
+                    // ignore and leave this.value as a string
+                }
+            }
+        }
+        else {
+            let parts = tag.split('.');
+
+            if (parts.length === 2) {
+                this.tag = parts[0];
+                this.value = parts[1];
+            }
         }
     }
 }

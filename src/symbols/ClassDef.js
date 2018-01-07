@@ -6,7 +6,7 @@ const CodeSymbol = require('./CodeSymbol');
 
 class ClassDef extends CodeSymbol {
     constructor (sourceFile, info) {
-        super(info.node);
+        super(info.at, info.node);
 
         this.sourceFile = sourceFile;
 

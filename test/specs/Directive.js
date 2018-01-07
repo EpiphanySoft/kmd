@@ -5,6 +5,15 @@ const expect = require('assertly').expect;
 
 const Directive = require('../../src/Directive');
 
+// @tag core
+// @define Ext.FooBar
+// @override Ext.Widget
+// @uses Ext.Thing
+// @require Ext.Foo
+// @inline
+// @noOptimize.callParent
+// @cmd-auto-dependency {aliasPrefix: "widget.", typeProperty: "xtype", defaultType: "toolbar"}
+
 describe('Directive', function () {
     describe('simple directives', function () {
         it('should ignore non-directives', function () {
@@ -156,6 +165,94 @@ describe('Directive', function () {
 
             expect(d.tag).to.be('tag');
             expect(d.value).to.be('core,platform');
+            expect(d.preprocessor).to.be(false);
+            expect(d.openTag).to.be(false);
+            expect(d.closeTag).to.be(false);
+        });
+
+        it('should parse #noOptimize.callParent', function () {
+            let d = Directive.parse('// @noOptimize.callParent');
+
+            expect(d.tag).to.be('noOptimize');
+            expect(d.value).to.be('callParent');
+            expect(d.preprocessor).to.be(false);
+            expect(d.openTag).to.be(false);
+            expect(d.closeTag).to.be(false);
+
+            d = Directive.parse('//@ noOptimize.callParent');
+
+            expect(d.tag).to.be('noOptimize');
+            expect(d.value).to.be('callParent');
+            expect(d.preprocessor).to.be(false);
+            expect(d.openTag).to.be(false);
+            expect(d.closeTag).to.be(false);
+        });
+
+        it('should parse #noOptimize.callParent', function () {
+            let d = Directive.parse('// #noOptimize.callParent');
+
+            expect(d.tag).to.be('noOptimize');
+            expect(d.value).to.be('callParent');
+            expect(d.preprocessor).to.be(false);
+            expect(d.openTag).to.be(false);
+            expect(d.closeTag).to.be(false);
+
+            d = Directive.parse('//# noOptimize.callParent');
+
+            expect(d.tag).to.be('noOptimize');
+            expect(d.value).to.be('callParent');
+            expect(d.preprocessor).to.be(false);
+            expect(d.openTag).to.be(false);
+            expect(d.closeTag).to.be(false);
+        });
+
+        it('should parse @cmd-auto-dependency', function () {
+            let d = Directive.parse('// @cmd-auto-dependency {aliasPrefix: "widget.", typeProperty: "xtype", defaultType: "toolbar"}');
+
+            expect(d.tag).to.be('cmd-auto-dependency');
+            expect(d.value).to.equal({
+                aliasPrefix: 'widget.',
+                defaultType: 'toolbar',
+                typeProperty: 'xtype'
+            });
+            expect(d.preprocessor).to.be(false);
+            expect(d.openTag).to.be(false);
+            expect(d.closeTag).to.be(false);
+
+            d = Directive.parse('//@ cmd-auto-dependency {aliasPrefix: "widget.", typeProperty: "xtype", defaultType: "toolbar"}');
+
+            expect(d.tag).to.be('cmd-auto-dependency');
+            expect(d.value).to.equal({
+                aliasPrefix: 'widget.',
+                defaultType: 'toolbar',
+                typeProperty: 'xtype'
+            });
+            expect(d.preprocessor).to.be(false);
+            expect(d.openTag).to.be(false);
+            expect(d.closeTag).to.be(false);
+        });
+
+        it('should parse #cmd-auto-dependency', function () {
+            let d = Directive.parse('// #cmd-auto-dependency {aliasPrefix: "widget.", typeProperty: "xtype", defaultType: "toolbar"}');
+
+            expect(d.tag).to.be('cmd-auto-dependency');
+            expect(d.value).to.equal({
+                aliasPrefix: 'widget.',
+                defaultType: 'toolbar',
+                typeProperty: 'xtype'
+            });
+            expect(d.preprocessor).to.be(false);
+            expect(d.openTag).to.be(false);
+            expect(d.closeTag).to.be(false);
+
+            d = Directive.parse('//# cmd-auto-dependency {aliasPrefix: "widget.", typeProperty: "xtype", defaultType: "toolbar"}');
+
+            expect(d.tag).to.be('cmd-auto-dependency');
+            expect(d.value).to.equal({
+                aliasPrefix: 'widget.',
+                defaultType: 'toolbar',
+                typeProperty: 'xtype'
+            });
             expect(d.preprocessor).to.be(false);
             expect(d.openTag).to.be(false);
             expect(d.closeTag).to.be(false);

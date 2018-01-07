@@ -5,6 +5,7 @@ const traverse = require('babel-traverse').default;
 const Bag = require('./Bag');
 const { Msg } = require('./Msg');
 const Directive = require('./Directive');
+const Reference = require('./Reference');
 const SymbolBag = require('./SymbolBag');
 const { Ast } = require('./symbols/Util');
 const ClassDef = require('./symbols/ClassDef');
@@ -15,6 +16,7 @@ class FileSymbols {
         this.file = sourceFile.file;
         this.generation = sourceFile.generation;
         this.manager = manager;
+        this.references = [];
         this.sourceFile = sourceFile;
         this.tags = new Bag();
     }
@@ -42,18 +44,15 @@ class FileSymbols {
         me._gatherComments(ast);
 
         traverse(ast, {
-            enter (path) {
-                //
-            },
-
             CallExpression (path) {
                 if (Ast.isExtDefine(path.node)) {
                     let classInfo = Ast.grokClass(path.node, me.comments);
 
                     if (classInfo.error) {
-                        me.manager.log(Msg.BAD_DEFINE, me, path, classInfo.error);
+                        me.manager.log(Msg.BAD_DEFINE, me._at(path), classInfo.error);
                     }
                     else {
+                        classInfo.at = me._at(classInfo.node);
                         classes.add(new ClassDef(me.sourceFile, classInfo));
                     }
                 }
@@ -94,6 +93,7 @@ class FileSymbols {
 
             if (!this._classes.has(className)) {
                 this._classes.add(new ClassDef(this.sourceFile, {
+                    at: this._at(comment),
                     body: null,
                     name: className,
                     node: comment
@@ -102,12 +102,48 @@ class FileSymbols {
         }
     }
 
+    _handleRequireDirective (directive, comment) {
+        let target = directive.value;
+        let type = Reference.TYPE.atRequire;
+
+        if (target.endsWith('.js')) {
+            type = Reference.TYPE.atRequireFile;
+        }
+        else if (target[0] === '@') {
+            type = Reference.TYPE.atRequireTag;
+            target = target.substr(1);
+        }
+
+        this.references.push(new Reference(this._at(comment), type, target));
+    }
+
     _handleTagDirective (directive) {
         let tags = directive.value.split(',');
 
         for (let t of tags) {
             this.tags.add(t);
         }
+    }
+
+    _handleUsesDirective (directive, comment) {
+        let target = directive.value;
+        let type = Reference.TYPE.atUses;
+
+        if (target.endsWith('.js')) {
+            type = Reference.TYPE.atUsesFile;
+        }
+        else if (target[0] === '@') {
+            type = Reference.TYPE.atUsesTag;
+            target = target.substr(1);
+        }
+
+        this.references.push(new Reference(this._at(comment), type, target));
+    }
+
+    _at (loc) {
+        let at = loc.node || loc;
+
+        return Object.assign({ file: this.file }, at.loc || at);
     }
 }
 

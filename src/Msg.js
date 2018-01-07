@@ -26,31 +26,28 @@ class Manager {
         this.thresholds = new Empty();
     }
 
-    log (msg, src, loc, ...params) {
+    log (msg, at, ...params) {
         let code = msg.code;
         let level = this.levels[code] || msg.level;
         let min = this.thresholds[code] || this.threshold;
 
         if (LEVEL[level] <= LEVEL[min]) {
-            let at = this.formatSrc(src, loc);
-            let m = msg.format(at, ...params);
+            let src = this.formatSrc(at);
+            let m = msg.format(src, ...params);
             let out = OUT[level] || level;
 
             this.logger[out](m);
         }
     }
 
-    formatSrc (src, loc) {
-        let f = src.file || src;
+    formatSrc (at) {
+        let f = at.file;
+
         if (this.pathMode === 'rel') {
-            f = src.relFile || f.relativize(this.baseDir).slashify();
+            f = f.relativize(this.baseDir).slashify();
         }
 
-        let at = loc && (loc.node || loc);
-        at = at && (at.loc || at);
-        at = at && at.start;
-
-        return at ? `${f.path}:${at.line}:${at.column + 1}` : f.path;
+        return `${f.path}:${at.start.line}:${at.start.column + 1}`;
     }
 }
 
@@ -67,15 +64,15 @@ class Msg {
         this.text = `${code}: ${text}`;
     }
 
-    format (at, ...params) {
+    format (src, ...params) {
         let s = this.text;
 
         for (let i = 0; i < params.length; ++i) {
             s = s.split(`\${${i}}`).join(params[i]);
         }
 
-        if (at) {
-            s += ' -- ' + at;
+        if (src) {
+            s += ' -- ' + src;
         }
 
         return s;
