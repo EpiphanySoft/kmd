@@ -77,3 +77,8 @@ Ext.define('WA.view.main.Main', function (Main) {
         derp: function (x) { return x; }
     }
 });
+
+// #define WA.MainView
+// #bogus
+// <bogus>
+// </bogus>

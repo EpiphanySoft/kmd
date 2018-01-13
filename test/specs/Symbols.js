@@ -80,7 +80,7 @@ describe('Symbols', function () {
 
             expect(this.mgr.messages).to.equal([
                 'WRN: C1000: Unrecognized use of Ext.define (Expected 2nd argument to be an ' +
-                    'object or function returning an object) -- app/app/Application.js:7:1'
+                    'object or function returning an object) -- app/app/Application.js:10:1'
             ]);
 
             expect(classes).to.not.be(null);
@@ -118,7 +118,7 @@ describe('Symbols', function () {
             this.mgr.fixAbsolutePaths();
             expect(this.mgr.messages).to.equal([
                 'WRN: C1000: Unrecognized use of Ext.define (Expected 2nd argument to be an ' +
-                    'object or function returning an object) -- app/app/Application.js:7:1'
+                    'object or function returning an object) -- app/app/Application.js:10:1'
             ]);
 
             symbols.sync();
@@ -149,6 +149,29 @@ describe('Symbols', function () {
             expect(mainView).to.be(classes.items[1]);
         });
 
+        it('should provide location for various node types', async function () {
+            this.mgr.thresholds['C1000'] = 'error';
+            let app = this.workspace.apps[0];
+
+            let sources = await app.loadSources();
+
+            let symbols = new Symbols(sources);
+            expect(symbols.files.length).to.be(2);
+
+            let classes = symbols.classes;
+
+            expect(this.mgr.messages).to.equal([]);
+
+            let mainView = classes.get('WA.view.main.Main');
+            let fileSyms = mainView.origin;
+
+            let at = { start: mainView.at.start, end: mainView.at.end };
+            at = fileSyms._at(at);
+            expect(at.start).to.be(mainView.at.start);
+            expect(at.end).to.be(mainView.at.end);
+            expect(at.file).to.be(fileSyms.file);
+        });
+
         it('should catalog classes by name and alias', async function () {
             this.mgr.levels['C1000'] = 'debug';
             let app = this.workspace.apps[0];
@@ -165,8 +188,10 @@ describe('Symbols', function () {
             let mainView = classes.get('WA.view.main.Main');
             let fileSyms = mainView.origin;
             let rel = fileSyms.file.relativize(Dir.workspace).slashify();
+            let path = fileSyms.path;
 
             expect(rel.path).to.equal('app/app/view/main/Main.js');
+            expect(path).to.be(fileSyms.file.path);
 
             expect(fileSyms.aliases.items).to.equal([ 'widget.mainview', 'widget.main' ]);
             expect(fileSyms.names.items).to.equal([

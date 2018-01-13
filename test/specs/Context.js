@@ -331,7 +331,7 @@ describe('Context', function () {
             expect(f1.relFile.path).to.be('app/app/Application.js');
             expect(f2.relFile.path).to.be('app/app/view/main/Main.js');
 
-            expect(f1.code.startsWith("Ext.define('WA.Application',")).to.be(true);
+            expect(f1.code.includes("Ext.define('WA.Application',")).to.be(true);
             expect(f2.code.includes("Ext.define('WA.view.main.Main',")).to.be(true);
 
             let nf = sources.files.get(app.dir.resolve('app.js'));
@@ -361,7 +361,7 @@ describe('Context', function () {
             expect(f3.relFile.path).to.be('app/app/view/main/Main.js');
 
             expect(f1.code.startsWith("Ext.application(")).to.be(true);
-            expect(f2.code.startsWith("Ext.define('WA.Application',")).to.be(true);
+            expect(f2.code.includes("Ext.define('WA.Application',")).to.be(true);
             expect(f3.code.includes("Ext.define('WA.view.main.Main',")).to.be(true);
 
             // Repeat:
@@ -379,7 +379,7 @@ describe('Context', function () {
             expect(f3.relFile.path).to.be('app/app/view/main/Main.js');
 
             expect(f1.code.startsWith("Ext.application(")).to.be(true);
-            expect(f2.code.startsWith("Ext.define('WA.Application',")).to.be(true);
+            expect(f2.code.includes("Ext.define('WA.Application',")).to.be(true);
             expect(f3.code.includes("Ext.define('WA.view.main.Main',")).to.be(true);
         });
     });

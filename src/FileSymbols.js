@@ -125,7 +125,7 @@ class FileSymbols {
             target = target.substr(1);
         }
 
-        this.references.push(new Reference(this._at(comment), type, target));
+        this._addRef(this._at(comment), type, target);
     }
 
     _handleTagDirective (directive) {
@@ -148,7 +148,7 @@ class FileSymbols {
             target = target.substr(1);
         }
 
-        this.references.push(new Reference(this._at(comment), type, target));
+        this._addRef(this._at(comment), type, target);
     }
 
     _at (loc) {
