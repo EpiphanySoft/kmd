@@ -8,43 +8,43 @@ const Reference = require('../Reference');
 const NONE = Object.freeze([]);
 
 class ClassDef extends CodeSymbol {
-    constructor (sourceSymbols, info) {
+    constructor (origin, info) {
         super(info.at, info.node);
 
-        this.sourceSymbols = sourceSymbols;
-
+        this.origin = origin;
         this.name = info.name;
         this.info = info;
 
-        this.extend = this.getBodyValues('extend', false);
+        this._extend = this.getBodyValues('extend', false);
 
-        this.altNames = this.getBodyValues('altNames');
-        this.alias = this.getBodyValues('alias');
-        this.mixins = this.getBodyValues('mixins');
-        this.requires = this.getBodyValues('requires');
-        this.uses = this.getBodyValues('uses');
-        this.xtypes = this.getBodyValues('xtypes');
+        // this._altNames = this.getBodyValues('altNames');
+        this._altNames = this.getBodyValues('alternateClassName');
+        this._alias = this.getBodyValues('alias');
+        this._mixins = this.getBodyValues('mixins');
+        this._requires = this.getBodyValues('requires');
+        this._uses = this.getBodyValues('uses');
+        this._xtype = this.getBodyValues('xtype');
     }
 
     register () {
-        this._addRef(this.extend, Reference.TYPE.extend);
+        this._addRef(this._extend, Reference.TYPE.extend);
 
-        this._addRefs(this.mixins, Reference.TYPE.mixins);
-        this._addRefs(this.requires, Reference.TYPE.requires);
-        this._addRefs(this.uses, Reference.TYPE.uses);
+        this._addRefs(this._mixins, Reference.TYPE.mixins);
+        this._addRefs(this._requires, Reference.TYPE.requires);
+        this._addRefs(this._uses, Reference.TYPE.uses);
 
-        this.sourceSymbols.names.add(this.name);
+        this.origin.names.add(this.name);
 
-        for (let alt of this.altNames) {
-            this.sourceSymbols.names.add(alt[0]);
+        for (let alt of this._altNames) {
+            this.origin.names.add(alt[0]);
         }
 
-        for (let alias of this.alias) {
-            this.sourceSymbols.aliases.add(alias[0]);
+        for (let alias of this._alias) {
+            this.origin.aliases.add(alias[0]);
         }
 
-        for (let xtype of this.xtypes) {
-            this.sourceSymbols.aliases.add('widget.' + xtype[0]);
+        for (let xtype of this._xtype) {
+            this.origin.aliases.add('widget.' + xtype[0]);
         }
     }
 
@@ -60,7 +60,7 @@ class ClassDef extends CodeSymbol {
     }
 
     getValue (val) {
-        return [ val.value, this.sourceSymbols._at(val.$value) ];
+        return [ val.value, this.origin._at(val.$value) ];
     }
 
     getValues (vals) {
@@ -77,7 +77,7 @@ class ClassDef extends CodeSymbol {
 
     _addRef (val, type) {
         if (val) {
-            this.sourceSymbols._addRef(val[1], type, val[0]);
+            this.origin._addRef(val[1], type, val[0]);
         }
     }
 
@@ -91,14 +91,14 @@ class ClassDef extends CodeSymbol {
 Object.assign(ClassDef.prototype, {
     isClassDef: true,
 
-    altNames: null,
-    aliases: null,
-    xtypes: null,
+    _altNames: null,
+    _alias: null,
+    _xtype: null,
 
-    extend: null,
-    mixins: null,
-    requires: null,
-    uses: null
+    _extend: null,
+    _mixins: null,
+    _requires: null,
+    _uses: null
 });
 
 module.exports = ClassDef;

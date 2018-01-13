@@ -103,7 +103,7 @@ class FileSymbols {
             let className = name.trim();
 
             if (!this._classes.has(className)) {
-                this._classes.add(new ClassDef(this.sourceFile, {
+                this._classes.add(new ClassDef(this, {
                     at: this._at(comment),
                     body: null,
                     name: className,
@@ -132,7 +132,7 @@ class FileSymbols {
         let tags = directive.value.split(',');
 
         for (let t of tags) {
-            this.tags.add(t);
+            this.tags.add(t.trim());
         }
     }
 

@@ -52,11 +52,13 @@ class Directive {
             }
         }
         else {
+            // convert things like #noOptimize.callParent into
+            // tag=noOptimize, value=callParent
             let parts = tag.split('.');
 
-            if (parts.length === 2) {
-                this.tag = parts[0];
-                this.value = parts[1];
+            if (parts.length > 1) {
+                this.value = parts.pop();
+                this.tag = parts.join('.');
             }
         }
     }

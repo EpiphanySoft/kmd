@@ -257,6 +257,42 @@ describe('Directive', function () {
             expect(d.openTag).to.be(false);
             expect(d.closeTag).to.be(false);
         });
+
+        it('should parse #foo', function () {
+            let d = Directive.parse('// #foo');
+
+            expect(d.tag).to.be('foo');
+            expect(d.value).to.be(null);
+            expect(d.preprocessor).to.be(false);
+            expect(d.openTag).to.be(false);
+            expect(d.closeTag).to.be(false);
+
+            d = Directive.parse('//# foo');
+
+            expect(d.tag).to.be('foo');
+            expect(d.value).to.be(null);
+            expect(d.preprocessor).to.be(false);
+            expect(d.openTag).to.be(false);
+            expect(d.closeTag).to.be(false);
+        });
+
+        it('should parse #foo.bar.zip', function () {
+            let d = Directive.parse('// #foo.bar.zip');
+
+            expect(d.tag).to.be('foo.bar');
+            expect(d.value).to.be('zip');
+            expect(d.preprocessor).to.be(false);
+            expect(d.openTag).to.be(false);
+            expect(d.closeTag).to.be(false);
+
+            d = Directive.parse('//# foo.bar.zip');
+
+            expect(d.tag).to.be('foo.bar');
+            expect(d.value).to.be('zip');
+            expect(d.preprocessor).to.be(false);
+            expect(d.openTag).to.be(false);
+            expect(d.closeTag).to.be(false);
+        });
     });
 
     describe('preprocessor directives', function () {

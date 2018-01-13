@@ -144,7 +144,37 @@ describe('Symbols', function () {
             // expect(classes.items[0].name).to.be('WA.Application');
             // expect(classes.items[0].name).to.be('WA.view.main.Main');
 
-            expect(classes.get('WA.view.main.Main')).to.be(classes.items[1]);
+            let mainView = classes.get('WA.view.main.Main');
+
+            expect(mainView).to.be(classes.items[1]);
+        });
+
+        it('should catalog classes by name and alias', async function () {
+            this.mgr.levels['C1000'] = 'debug';
+            let app = this.workspace.apps[0];
+
+            let sources = await app.loadSources();
+
+            let symbols = new Symbols(sources);
+            expect(symbols.files.length).to.be(2);
+
+            let classes = symbols.classes;
+
+            expect(this.mgr.messages).to.equal([]);
+
+            let mainView = classes.get('WA.view.main.Main');
+            let fileSyms = mainView.origin;
+            let rel = fileSyms.file.relativize(Dir.workspace).slashify();
+
+            expect(rel.path).to.equal('app/app/view/main/Main.js');
+
+            expect(fileSyms.aliases.items).to.equal([ 'widget.mainview', 'widget.main' ]);
+            expect(fileSyms.names.items).to.equal([
+                // there are two @define directives followed by Ext.define() of one
+                // of the same names and a new alt name:
+                'WA.view.main.Main', 'WA.AltMain', 'WA.MainView'
+            ]);
+            expect(fileSyms.tags.items).to.equal([ 'mainview', 'viewmain' ]);
         });
     });
 });

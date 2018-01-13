@@ -145,13 +145,13 @@ class Context {
         return this._manager || this.workspace.manager;
     }
 
-    set manager (value) {
-        if (value && !value.baseDir) {
-            value.baseDir = this.workspace.dir;
-        }
-
-        this._manager = value;
-    }
+    // set manager (value) {
+    //     if (value && !value.baseDir) {
+    //         value.baseDir = this.workspace.dir;
+    //     }
+    //
+    //     this._manager = value;
+    // }
 
     /**
      * @property {Workspace} workspace
