@@ -10,7 +10,7 @@ Ext.define('WA.view.main.Main', function (Main) {
     return {
         extend: 'Ext.Panel',
         alias: 'mainview',
-        xtype: 'main',
+        xtype: ['main'],
         alternateClassName: 'WA.AltMain',
 
         'requires': [

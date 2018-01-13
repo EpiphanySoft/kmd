@@ -18,6 +18,9 @@ class FileSymbols {
         this.manager = manager;
         this.references = [];
         this.sourceFile = sourceFile;
+
+        this.aliases = new Bag();
+        this.names = new Bag();
         this.tags = new Bag();
     }
 
@@ -36,28 +39,16 @@ class FileSymbols {
         return this.sourceFile.path;
     }
 
+    _addRef (at, type, target) {
+        this.references.push(new Reference(at, type, target));
+    }
+
     _parse () {
         let me = this;
         let ast = me.sourceFile.ast;
         let classes = me._classes = new SymbolBag();
 
         me._gatherComments(ast);
-
-        traverse(ast, {
-            CallExpression (path) {
-                if (Ast.isExtDefine(path.node)) {
-                    let classInfo = Ast.grokClass(path.node, me.comments);
-
-                    if (classInfo.error) {
-                        me.manager.log(Msg.BAD_DEFINE, me._at(path), classInfo.error);
-                    }
-                    else {
-                        classInfo.at = me._at(classInfo.node);
-                        classes.add(new ClassDef(me.sourceFile, classInfo));
-                    }
-                }
-            }
-        });
 
         for (let c of ast.comments) {
             if (c.type === 'CommentLine') {
@@ -70,6 +61,26 @@ class FileSymbols {
                     }
                 }
             }
+        }
+
+        traverse(ast, {
+            CallExpression (path) {
+                if (Ast.isExtDefine(path.node)) {
+                    let classInfo = Ast.grokClass(path.node, me.comments);
+
+                    if (classInfo.error) {
+                        me.manager.log(Msg.BAD_DEFINE, me._at(path), classInfo.error);
+                    }
+                    else {
+                        classInfo.at = me._at(classInfo.node);
+                        classes.add(new ClassDef(me, classInfo));
+                    }
+                }
+            }
+        });
+
+        for (let c of classes) {
+            c.register();
         }
     }
 

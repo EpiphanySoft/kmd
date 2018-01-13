@@ -1,14 +1,17 @@
 'use strict';
 
 // https://github.com/babel/babylon/blob/master/ast/spec.md
+const { raise } = require('../util');
 
 const Ast = {
     claimComments (node, comments) {
-        let c, it, ret = null;
+        let c, n, ret = null;
 
-        for (it = node; (c = comments[it.loc.start.line - 1]) && !c.claimed; it = c.node) {
-            (ret || (ret = [])).unshift(c);
-            c.claimed = true;
+        if (comments) {
+            for (n = node; (c = comments[n.loc.start.line - 1]) && !c.claimed; n = c.node) {
+                (ret || (ret = [])).unshift(c);
+                c.claimed = true;
+            }
         }
 
         return ret;
@@ -34,7 +37,7 @@ const Ast = {
             value = null;
         }
         else {
-            debugger
+            raise(`Cannot convert node type ${node.type}`);
         }
 
         return {
@@ -65,37 +68,39 @@ const Ast = {
                 let kn = prop.key;
                 let key;
 
+                if (prop.computed) {
+                    continue;
+                }
+
                 if (kn.type === 'Identifier') {
                     key = kn.name;
                 }
                 else if (kn.type === 'StringLiteral') {
                     key = kn.value;
                 }
-                else if (kn.type === 'MemberExpression') {
-                    // ignore?
-                }
+                // else if (kn.type === 'MemberExpression') {
+                //     continue; // ignore
+                // }
                 else {
-                    debugger
+                    raise(`Cannot convert node type ${kn.type}`);
                 }
 
-                if (key) {
-                    let rhs = {
-                        $prop: prop,
-                        $key: kn,
-                        comments: Ast.claimComments(prop, comments),
-                        method: true
-                    };
+                let rhs = {
+                    $prop: prop,
+                    $key: kn,
+                    comments: Ast.claimComments(prop, comments),
+                    method: true
+                };
 
-                    if (isProp) {
-                        Object.assign(rhs, Ast.convert(rhs.$vn = prop.value, comments));
-                    }
-
-                    obj[key] = rhs;
+                if (isProp) {
+                    Object.assign(rhs, Ast.convert(prop.value, comments));
                 }
+
+                obj[key] = rhs;
             }
-            else {
-                debugger
-            }
+            // else {
+            //     debugger
+            // }
         }
 
         return obj;
@@ -107,7 +112,7 @@ const Ast = {
         let n = body.length;
         let r = body[n - 1];
 
-        if (!node.async && !node.generator && r.type === 'ReturnStatement' && r.argument) {
+        if (!node.async && !node.generator && r && r.type === 'ReturnStatement' && r.argument) {
             return r.argument;
         }
 
@@ -117,7 +122,7 @@ const Ast = {
     grokClass (node, comments) {
         let args = node.arguments;
 
-        if (args[0].type !== 'StringLiteral') {
+        if (args.length < 2 || args[0].type !== 'StringLiteral') {
             return {
                 src: args[0],
                 error: 'Expected class name as first argument'

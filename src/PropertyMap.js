@@ -1,13 +1,6 @@
 'use strict';
 
-function raise (msg) {
-    throw new Error(msg);
-}
-
-function primitive (v) {
-    let t = typeof v;
-    return t === 'string' || t === 'number' || t === 'boolean';
-}
+const { raise, primitive } = require('./util');
 
 function grow (path, name) {
     return path ? path + '.' + name : name;
