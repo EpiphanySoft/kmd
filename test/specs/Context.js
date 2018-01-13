@@ -5,7 +5,7 @@
 const Phyl = require('phylo');
 const expect = require('assertly').expect;
 
-const { Context, App, Package, Workspace } = require('../../src/Context');
+const { Manager, Context, App, Package, Workspace } = require('../../src/Context');
 const Sources = require('../../src/Sources');
 
 const baseDir = Phyl.from(__dirname).resolve('../..');
@@ -50,6 +50,28 @@ describe('Context', function () {
             let context = Context.from(Dir.soloApp);
 
             expect(context.file.name).to.be('app.json');
+            expect(context.isApp).to.be(true);
+            expect(context.manager).to.not.be.falsy();
+
+            let props = context.getConfigProps();
+
+            expect(props).to.not.be(null);
+
+            let v = props.get('workspace.build.dir');
+
+            expect(v).to.not.be(null);
+
+            let dir = baseRel(v);
+            expect(dir.path).to.be('test/projects/solo-app/build');
+        });
+
+        it('should load solo-app w/manager', function () {
+            let mgr = new Manager();
+            let context = Context.from(Dir.soloApp, mgr);
+
+            expect(context.file.name).to.be('app.json');
+            expect(context.isApp).to.be(true);
+            expect(context.manager).to.be(mgr);
 
             let props = context.getConfigProps();
 
@@ -177,7 +199,7 @@ describe('Context', function () {
             pkgs = workspace.getPackagePath();
             expect(pkgs.length).to.be(1);
 
-            let p = workspace.relativePath(pkgs[0]);
+            let p = workspace.relativize(pkgs[0]);
             expect(p.path).to.be('packages');
         });
 
@@ -255,7 +277,7 @@ describe('Context', function () {
 
             let workspace = pkg.workspace;
 
-            expect(workspace.relativePath(pkg.file).path).
+            expect(workspace.relativize(pkg.file).path).
                 to.be('packages/local/foo/package.json');
 
             let pkgs = workspace.packages;
@@ -306,11 +328,11 @@ describe('Context', function () {
             let f1 = files[0];
             let f2 = files[1];
 
-            expect(f1.relativePath.path).to.be('app/app/Application.js');
-            expect(f2.relativePath.path).to.be('app/app/view/main/Main.js');
+            expect(f1.relFile.path).to.be('app/app/Application.js');
+            expect(f2.relFile.path).to.be('app/app/view/main/Main.js');
 
-            expect(f1.code.startsWith("Ext.define('WA.Application',")).to.be(true);
-            expect(f2.code.startsWith("Ext.define('WA.view.main.Main',")).to.be(true);
+            expect(f1.code.includes("Ext.define('WA.Application',")).to.be(true);
+            expect(f2.code.includes("Ext.define('WA.view.main.Main',")).to.be(true);
 
             let nf = sources.files.get(app.dir.resolve('app.js'));
             expect(nf).to.be(null);
@@ -334,13 +356,13 @@ describe('Context', function () {
             let f2 = files[1];
             let f3 = files[2];
 
-            expect(f1.relativePath.path).to.be('app/app.js');
-            expect(f2.relativePath.path).to.be('app/app/Application.js');
-            expect(f3.relativePath.path).to.be('app/app/view/main/Main.js');
+            expect(f1.relFile.path).to.be('app/app.js');
+            expect(f2.relFile.path).to.be('app/app/Application.js');
+            expect(f3.relFile.path).to.be('app/app/view/main/Main.js');
 
             expect(f1.code.startsWith("Ext.application(")).to.be(true);
-            expect(f2.code.startsWith("Ext.define('WA.Application',")).to.be(true);
-            expect(f3.code.startsWith("Ext.define('WA.view.main.Main',")).to.be(true);
+            expect(f2.code.includes("Ext.define('WA.Application',")).to.be(true);
+            expect(f3.code.includes("Ext.define('WA.view.main.Main',")).to.be(true);
 
             // Repeat:
             sources = await app.loadSources();
@@ -352,13 +374,13 @@ describe('Context', function () {
             f2 = files[1];
             f3 = files[2];
 
-            expect(f1.relativePath.path).to.be('app/app.js');
-            expect(f2.relativePath.path).to.be('app/app/Application.js');
-            expect(f3.relativePath.path).to.be('app/app/view/main/Main.js');
+            expect(f1.relFile.path).to.be('app/app.js');
+            expect(f2.relFile.path).to.be('app/app/Application.js');
+            expect(f3.relFile.path).to.be('app/app/view/main/Main.js');
 
             expect(f1.code.startsWith("Ext.application(")).to.be(true);
-            expect(f2.code.startsWith("Ext.define('WA.Application',")).to.be(true);
-            expect(f3.code.startsWith("Ext.define('WA.view.main.Main',")).to.be(true);
+            expect(f2.code.includes("Ext.define('WA.Application',")).to.be(true);
+            expect(f3.code.includes("Ext.define('WA.view.main.Main',")).to.be(true);
         });
     });
 

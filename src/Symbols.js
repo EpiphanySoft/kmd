@@ -7,6 +7,7 @@ const FileSymbols = require('./FileSymbols');
 class Symbols {
     constructor (sources) {
         this.sources = sources;
+        this.manager = sources.manager;
 
         this.files = new FileBag(sources.workspace.dir);
 
@@ -33,7 +34,7 @@ class Symbols {
             let syms = this.files.get(sf.file);
 
             if (!syms || syms.generation !== sf.generation) {
-                syms = new FileSymbols(sf);
+                syms = new FileSymbols(this, sf, this.manager);
 
                 this.files.add(syms);
                 ++this.generation;
@@ -65,13 +66,17 @@ class Symbols {
         ++this.generation;
         this._classes = new SymbolBag();
 
-        for (let syms of this.files) {
-            for (let c of syms.classes) {
+        for (let fileSymbols of this.files) {
+            for (let c of fileSymbols.classes) {
                 this._classes.add(c);
             }
         }
 
-        this._classes.sort();
+        for (let fileSymbols of this.files) {
+            //
+        }
+
+        //
     }
 }
 

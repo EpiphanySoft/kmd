@@ -5,7 +5,7 @@
 const Phyl = require('phylo');
 const expect = require('assertly').expect;
 
-const { Context, App, Package, Workspace } = require('../../src/Context');
+const { Manager, Context, App, Package, Workspace } = require('../../src/Context');
 const Symbols = require('../../src/Symbols');
 
 const baseDir = Phyl.from(__dirname).resolve('../..');
@@ -18,23 +18,79 @@ const Dir = {
     workspace: projectsDir.join('workspace')
 };
 
+class TestManager extends Manager {
+    constructor () {
+        super();
+
+        this.messages = [];
+
+        this.logger = {
+            error: m => this._log('ERR', m),
+            info:  m => this._log('INF', m),
+            log:   m => this._log('DBG', m),
+            warn:  m => this._log('WRN', m)
+        };
+    }
+
+    _log (level, msg) {
+        this.messages.push(`${level}: ${msg}`);
+    }
+
+    fixAbsolutePaths () {
+        this.messages = this.messages.map(m => {
+            let start = m.lastIndexOf('--') + 3;
+            let end = m.lastIndexOf(':', m.lastIndexOf(':') - 1);
+            let a = m.substr(0, start);
+            let b = Phyl.from(m.substring(start, end));
+            let c = m.substr(end);
+
+            expect(b.isAbsolute()).to.be(true);
+
+            let r = b.relativize(this.baseDir).slashify();
+
+            return a + r.path + c;
+        });
+    }
+}
+
+function getClassNames (symbols) {
+    let classes = symbols.classes;
+    expect(classes).to.not.be(null);
+    classes.sort();
+
+    let classNames = classes.items.map(it => it.name);
+    return [classes, classNames];
+}
+
 describe('Symbols', function () {
     describe('basics', async function () {
+        beforeEach(function () {
+            this.workspace = Context.from(Dir.workspace, this.mgr = new TestManager());
+        });
+
         it('should load classes', async function () {
-            let workspace = Context.from(Dir.workspace);
-            let app = workspace.apps[0];
+            this.mgr.pathMode = 'rel';
+            let app = this.workspace.apps[0];
 
             let sources = await app.loadSources();
 
             let symbols = new Symbols(sources);
 
-            let classes = symbols.classes;
+            let [classes, classNames] = getClassNames(symbols);
+
+            expect(this.mgr.messages).to.equal([
+                'WRN: C1000: Unrecognized use of Ext.define (Expected 2nd argument to be an ' +
+                    'object or function returning an object) -- app/app/Application.js:10:1'
+            ]);
 
             expect(classes).to.not.be(null);
+            classes.sort();
 
-            expect(classes.length).to.be(2);
-            expect(classes.items[0].name).to.be('WA.Application');
-            expect(classes.items[1].name).to.be('WA.view.main.Main');
+            expect(classNames).to.equal([
+                'WA.Application',
+                'WA.MainView',
+                'WA.view.main.Main'
+            ]);
 
             // Ensure items are cached:
             let sf = sources.files.items[0];
@@ -48,18 +104,22 @@ describe('Symbols', function () {
         });
 
         it('should remove classes', async function () {
-            let workspace = Context.from(Dir.workspace);
-            let app = workspace.apps[0];
+            let app = this.workspace.apps[0];
 
             let sources = await app.loadSources();
 
             let symbols = new Symbols(sources);
 
             expect(symbols.files.length).to.be(2);
-
             let classes = symbols.classes;
 
             expect(classes).to.not.be(null);
+
+            this.mgr.fixAbsolutePaths();
+            expect(this.mgr.messages).to.equal([
+                'WRN: C1000: Unrecognized use of Ext.define (Expected 2nd argument to be an ' +
+                    'object or function returning an object) -- app/app/Application.js:10:1'
+            ]);
 
             symbols.sync();
 
@@ -74,14 +134,72 @@ describe('Symbols', function () {
 
             expect(symbols.files.length).to.be(1);
 
-            classes = symbols.classes;
-            expect(classes).to.not.be(null);
+            let classNames;
+            [classes, classNames] = getClassNames(symbols);
 
-            expect(classes.length).to.be(1);
+            expect(classNames).to.equal([
+                'WA.MainView',
+                'WA.view.main.Main'
+            ]);
             // expect(classes.items[0].name).to.be('WA.Application');
-            expect(classes.items[0].name).to.be('WA.view.main.Main');
+            // expect(classes.items[0].name).to.be('WA.view.main.Main');
 
-            expect(classes.get('WA.view.main.Main')).to.be(classes.items[0]);
+            let mainView = classes.get('WA.view.main.Main');
+
+            expect(mainView).to.be(classes.items[1]);
+        });
+
+        it('should provide location for various node types', async function () {
+            this.mgr.thresholds['C1000'] = 'error';
+            let app = this.workspace.apps[0];
+
+            let sources = await app.loadSources();
+
+            let symbols = new Symbols(sources);
+            expect(symbols.files.length).to.be(2);
+
+            let classes = symbols.classes;
+
+            expect(this.mgr.messages).to.equal([]);
+
+            let mainView = classes.get('WA.view.main.Main');
+            let fileSyms = mainView.origin;
+
+            let at = { start: mainView.at.start, end: mainView.at.end };
+            at = fileSyms._at(at);
+            expect(at.start).to.be(mainView.at.start);
+            expect(at.end).to.be(mainView.at.end);
+            expect(at.file).to.be(fileSyms.file);
+        });
+
+        it('should catalog classes by name and alias', async function () {
+            this.mgr.levels['C1000'] = 'debug';
+            let app = this.workspace.apps[0];
+
+            let sources = await app.loadSources();
+
+            let symbols = new Symbols(sources);
+            expect(symbols.files.length).to.be(2);
+
+            let classes = symbols.classes;
+
+            expect(this.mgr.messages).to.equal([]);
+
+            let mainView = classes.get('WA.view.main.Main');
+            let fileSyms = mainView.origin;
+            let rel = fileSyms.file.relativize(Dir.workspace).slashify();
+            let path = fileSyms.path;
+
+            expect(rel.path).to.equal('app/app/view/main/Main.js');
+            expect(path).to.be(fileSyms.file.path);
+
+            expect(fileSyms.aliases.items).to.equal([ 'widget.mainview', 'widget.main' ]);
+            expect(fileSyms.names.items).to.equal([
+                // there are two @define directives followed by Ext.define() of one
+                // of the same names and a new alt name:
+                'WA.view.main.Main', 'WA.AltMain', 'WA.MainView'
+            ]);
+            expect(fileSyms.tags.items).to.equal([ 'mainview', 'viewmain' ]);
         });
     });
 });
