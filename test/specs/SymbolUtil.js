@@ -6,7 +6,7 @@ const traverse = require('babel-traverse').default;
 
 const expect = require('assertly').expect;
 
-const { Ast } = require('../../../src/symbols/Util');
+const { Ast } = require('../../src/symbols/Util');
 
 function parse (code) {
     return babylon.parse(code);
